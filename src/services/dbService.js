@@ -95,6 +95,7 @@ export async function importDatabaseFromServer(url) {
     const encryptedText = await response.text();
 
     const decrypted = decryptData(encryptedText);
+
     const base64 = uint8ArrayToBase64(decrypted);
 
     await Filesystem.writeFile({
