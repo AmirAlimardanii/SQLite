@@ -124,6 +124,18 @@ export async function getArtists(limit = 10) {
   }
 }
 
+export async function getStudy(limit = 10) {
+  if (!db) throw new Error("❌ Database not loaded yet");
+
+  if (Capacitor.getPlatform() === "web") {
+    const res = db.exec(`SELECT id, name, code FROM [6001_6001] LIMIT ${limit}`);
+    return res.length > 0 ? res[0].values.map(([id, name, code]) => ({ id, name, code })) : [];
+  } else {
+    const res = await db.query(`SELECT id, name, code FROM [6001_6001] LIMIT ${limit}`);
+    return res.values;
+  }
+}
+
 export async function getInvoices(limit = 415) {
   if (!db) throw new Error("❌ Database not loaded yet");
 

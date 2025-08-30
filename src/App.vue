@@ -9,9 +9,11 @@ import {
   deleteArtist,
   syncWithServer,
   getInvoices,
+  getStudy,
 } from "@/services/dbService";
 
 const artists = ref([]);
+const study = ref([]);
 
 const newArtistName = ref("");
 const editArtistName = ref("");
@@ -19,13 +21,16 @@ const selectedArtistId = ref(null);
 
 onMounted(async () => {
   await importDatabaseFromServer(
-    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/Chinook_part1_encrypted.txt"
+    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/6001_encrypted.txt"
 
     // "https://raw.githubusercontent.com/m79yashar/sqlitr-db/refs/heads/main/chinook.enc.txt"
     // 'https://raw.githubusercontent.com/eltechno/python_course/master/Chinook.sqlite'
   );
-  artists.value = await getArtists();
-  console.log("artists:", artists.value);
+  // artists.value = await getArtists();
+  // console.log("artists:", artists.value);
+
+  study.value = await getStudy();
+  console.log("study:", study.value);
 
   // invoices.value = await getInvoices();
 
@@ -71,12 +76,14 @@ async function remove(id) {
         <tr>
           <th>id</th>
           <th>name</th>
+          <th>code</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in artists" :key="item.id">
+        <tr v-for="item in study" :key="item.id">
           <td>{{ item.id }}</td>
           <td>{{ item.name }}</td>
+          <td>{{ item.code }}</td>
         </tr>
       </tbody>
     </table>
