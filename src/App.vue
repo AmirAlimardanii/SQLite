@@ -21,7 +21,11 @@ const selectedArtistId = ref(null);
 
 onMounted(async () => {
   await importDatabaseFromServer(
-    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/6001_encrypted.txt"
+    [
+      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/1708_encrypted1.txt",
+      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/6007_encrypted1.txt",
+      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/6001_encrypted1.txt",
+    ]
 
     // "https://raw.githubusercontent.com/m79yashar/sqlitr-db/refs/heads/main/chinook.enc.txt"
     // 'https://raw.githubusercontent.com/eltechno/python_course/master/Chinook.sqlite'

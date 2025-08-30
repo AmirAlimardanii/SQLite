@@ -65,7 +65,7 @@ let db = null;
 let sqlite = null;
 
 // --- دریافت و لود دیتابیس ---
-export async function importDatabaseFromServer(url) {
+export async function importDatabaseFromServer1(urls) {
   if (Capacitor.getPlatform() === "web") {
     const SQL = await initSqlJs({
       locateFile: (file) => `/sql-wasm.wasm`,
@@ -78,23 +78,29 @@ export async function importDatabaseFromServer(url) {
       return;
     }
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("❌ Failed to download DB");
-    const encryptedText = await response.text();
+    for (const url of urls) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("❌ Failed to download DB");
+      const encryptedText = await response.text();
 
-    const decrypted = decryptData(encryptedText);
-
-    db = new SQL.Database(decrypted);
-    console.log("✅ Chinook DB downloaded & decrypted from server");
-
+      const decrypted = decryptData(encryptedText);
+      console.log(decrypted, "decrypted");
+    }
     await saveToIndexedDB(decrypted);
+
+    // db = new SQL.Database(decrypted);
+    console.log("✅ Chinook DB downloaded & decrypted from server");
   } else {
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("❌ Failed to download DB");
-    const encryptedText = await response.text();
+    for (const url of urls) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("❌ Failed to download DB");
+      const encryptedText = await response.text();
 
-    const decrypted = decryptData(encryptedText);
+      const decrypted = decryptData(encryptedText);
+      console.log(decrypted, "decrypted");
+      await saveToIndexedDB(decrypted);
+    }
 
     const base64 = uint8ArrayToBase64(decrypted);
 
@@ -111,6 +117,65 @@ export async function importDatabaseFromServer(url) {
   }
 }
 
+export async function importDatabaseFromServer(urls) {
+  if (Capacitor.getPlatform() === "web") {
+    const SQL = await initSqlJs({
+      locateFile: (file) => `/sql-wasm.wasm`,
+    });
+
+    const savedDb = await loadFromIndexedDB();
+    if (savedDb) {
+      db = new SQL.Database(savedDb);
+      console.log("✅ DB loaded from IndexedDB");
+      return;
+    }
+
+    // دیتابیس نهایی
+    const mainDb = new SQL.Database();
+
+    for (let i = 0; i < urls.length; i++) {
+      const response = await fetch(urls[i]);
+      if (!response.ok) throw new Error("❌ Failed to download DB");
+      const encryptedText = await response.text();
+
+      const decrypted = decryptData(encryptedText);
+      const tempDb = new SQL.Database(decrypted);
+
+      // فرض بر اینه که جدول‌ها اسمشون studies هست
+      const rows = tempDb.exec("SELECT * FROM studies");
+      if (rows.length > 0) {
+        const columns = rows[0].columns;
+        const values = rows[0].values;
+
+        // ایجاد جدول اگر هنوز ساخته نشده
+        mainDb.exec(
+          `CREATE TABLE IF NOT EXISTS studies (${columns.map((c) => `"${c}" TEXT`).join(", ")})`
+        );
+
+        // درج داده‌ها
+        const stmt = mainDb.prepare(
+          `INSERT INTO studies (${columns.map((c) => `"${c}"`).join(", ")}) VALUES (${columns
+            .map(() => "?")
+            .join(", ")})`
+        );
+        for (const row of values) {
+          stmt.run(row);
+        }
+        stmt.free();
+      }
+
+      tempDb.close();
+    }
+
+    // ذخیره دیتابیس نهایی
+    const mergedBinary = mainDb.export();
+    await saveToIndexedDB(mergedBinary);
+
+    db = mainDb;
+    console.log("✅ Merged DB downloaded & saved");
+  }
+}
+
 // --- CRUD Artist ---
 export async function getArtists(limit = 10) {
   if (!db) throw new Error("❌ Database not loaded yet");
@@ -124,14 +189,14 @@ export async function getArtists(limit = 10) {
   }
 }
 
-export async function getStudy(limit = 10) {
+export async function getStudy(limit = 400) {
   if (!db) throw new Error("❌ Database not loaded yet");
 
   if (Capacitor.getPlatform() === "web") {
-    const res = db.exec(`SELECT id, name, code FROM [6001_6001] LIMIT ${limit}`);
+    const res = db.exec(`SELECT id, name, code FROM studies LIMIT ${limit}`);
     return res.length > 0 ? res[0].values.map(([id, name, code]) => ({ id, name, code })) : [];
   } else {
-    const res = await db.query(`SELECT id, name, code FROM [6001_6001] LIMIT ${limit}`);
+    const res = await db.query(`SELECT id, name, code FROM studies LIMIT ${limit}`);
     return res.values;
   }
 }
