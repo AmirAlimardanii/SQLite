@@ -9,6 +9,7 @@ import {
   syncWithServer,
   getInvoices,
   getStudy,
+  getLastUpdate,
 } from "@/services/dbService";
 
 const artists = ref([]);
@@ -24,6 +25,9 @@ onMounted(async () => {
   ]);
 
   study.value = await getStudy();
+
+  const lastUpdate = await getLastUpdate();
+  console.log("Last update:", lastUpdate);
 });
 
 async function add() {

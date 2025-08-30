@@ -170,8 +170,6 @@ export async function importDatabaseFromServer(urls) {
       const mergedBinary = mainDb.export();
       await saveToIndexedDB(mergedBinary);
 
-      let myTime5 = Date.now();
-      console.log("save to index", myTime5 - myTime4);
       db = mainDb;
       console.log("✅ Merged DB downloaded & saved");
 
@@ -196,7 +194,7 @@ export async function getStudy(limit = 100000) {
   if (!db) throw new Error("❌ Database not loaded yet");
 
   if (Capacitor.getPlatform() === "web") {
-    const res = db.exec(`SELECT * FROM sources LIMIT ${limit}`);
+    const res = db.exec(`SELECT * FROM sources ORDER BY updated_at DESC LIMIT ${limit}`);
     return res.length > 0
       ? res[0].values.map((row) => ({
           id: row[0],
@@ -219,8 +217,20 @@ export async function getStudy(limit = 100000) {
         }))
       : [];
   } else {
-    const res = await db.query(`SELECT * FROM sources LIMIT ${limit}`);
+    const res = await db.query(`SELECT * FROM sources ORDER BY updated_at DESC LIMIT ${limit}`);
     return res.values;
+  }
+}
+
+export async function getLastUpdate() {
+  if (!db) throw new Error("❌ Database not loaded yet");
+
+  if (Capacitor.getPlatform() === "web") {
+    const res = db.exec(`SELECT MAX(updated_at) AS last_update FROM sources`);
+    return res.length > 0 ? res[0].values[0] : null;
+  } else {
+    const res = await db.query(`SELECT MAX(updated_at) AS last_update FROM sources`);
+    return res.values.length > 0 ? res.values[0] : null;
   }
 }
 
