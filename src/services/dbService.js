@@ -141,20 +141,20 @@ export async function importDatabaseFromServer(urls) {
       const decrypted = decryptData(encryptedText);
       const tempDb = new SQL.Database(decrypted);
 
-      // فرض بر اینه که جدول‌ها اسمشون studies هست
-      const rows = tempDb.exec("SELECT * FROM studies");
+      // فرض بر اینه که جدول‌ها اسمشون sources هست
+      const rows = tempDb.exec("SELECT * FROM sources");
       if (rows.length > 0) {
         const columns = rows[0].columns;
         const values = rows[0].values;
 
         // ایجاد جدول اگر هنوز ساخته نشده
         mainDb.exec(
-          `CREATE TABLE IF NOT EXISTS studies (${columns.map((c) => `"${c}" TEXT`).join(", ")})`
+          `CREATE TABLE IF NOT EXISTS sources (${columns.map((c) => `"${c}" TEXT`).join(", ")})`
         );
 
         // درج داده‌ها
         const stmt = mainDb.prepare(
-          `INSERT INTO studies (${columns.map((c) => `"${c}"`).join(", ")}) VALUES (${columns
+          `INSERT INTO sources (${columns.map((c) => `"${c}"`).join(", ")}) VALUES (${columns
             .map(() => "?")
             .join(", ")})`
         );
@@ -165,17 +165,20 @@ export async function importDatabaseFromServer(urls) {
       }
 
       tempDb.close();
+
+      // ذخیره دیتابیس نهایی
+      const mergedBinary = mainDb.export();
+      await saveToIndexedDB(mergedBinary);
+
+      let myTime5 = Date.now();
+      console.log("save to index", myTime5 - myTime4);
+      db = mainDb;
+      console.log("✅ Merged DB downloaded & saved");
+
+      return myTime5;
     }
-
-    // ذخیره دیتابیس نهایی
-    const mergedBinary = mainDb.export();
-    await saveToIndexedDB(mergedBinary);
-
-    db = mainDb;
-    console.log("✅ Merged DB downloaded & saved");
   }
 }
-
 // --- CRUD Artist ---
 export async function getArtists(limit = 10) {
   if (!db) throw new Error("❌ Database not loaded yet");
@@ -189,11 +192,11 @@ export async function getArtists(limit = 10) {
   }
 }
 
-export async function getStudy(limit = 400) {
+export async function getStudy(limit = 100000) {
   if (!db) throw new Error("❌ Database not loaded yet");
 
   if (Capacitor.getPlatform() === "web") {
-    const res = db.exec(`SELECT * FROM studies LIMIT ${limit}`);
+    const res = db.exec(`SELECT * FROM sources LIMIT ${limit}`);
     return res.length > 0
       ? res[0].values.map((row) => ({
           id: row[0],
@@ -211,10 +214,12 @@ export async function getStudy(limit = 400) {
           lng: row[12],
           lat: row[13],
           alt: row[14],
+          created_at: row[15],
+          updated_at: row[16],
         }))
       : [];
   } else {
-    const res = await db.query(`SELECT * FROM studies LIMIT ${limit}`);
+    const res = await db.query(`SELECT * FROM sources LIMIT ${limit}`);
     return res.values;
   }
 }

@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted } from "vue";
-// import { exportEncryptedDB } from '@/services/dbService'
 import {
   importDatabaseFromServer,
   getArtists,
@@ -20,25 +19,11 @@ const editArtistName = ref("");
 const selectedArtistId = ref(null);
 
 onMounted(async () => {
-  await importDatabaseFromServer(
-    [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/1708_encrypted1.txt",
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/6007_encrypted1.txt",
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/6001_encrypted1.txt",
-    ]
-
-    // "https://raw.githubusercontent.com/m79yashar/sqlitr-db/refs/heads/main/chinook.enc.txt"
-    // 'https://raw.githubusercontent.com/eltechno/python_course/master/Chinook.sqlite'
-  );
-  // artists.value = await getArtists();
-  // console.log("artists:", artists.value);
+  await importDatabaseFromServer([
+    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/data_encrypted.txt",
+  ]);
 
   study.value = await getStudy();
-  console.log("study:", study.value);
-
-  // invoices.value = await getInvoices();
-
-  // await syncWithServer("https://raw.githubusercontent.com/m79yashar/sqlitr-db/refs/heads/main/");
 });
 
 async function add() {
@@ -66,10 +51,6 @@ async function remove(id) {
   await deleteArtist(id);
   artists.value = await getArtists(300);
 }
-
-// function downloadEncrypted() {
-//   exportEncryptedDB('chinook.enc.txt') // دانلود نسخه رمز شده
-// }
 </script>
 
 <template>
@@ -94,6 +75,8 @@ async function remove(id) {
           <th>lng</th>
           <th>lat</th>
           <th>alt</th>
+          <th>created_at</th>
+          <th>updated_at</th>
         </tr>
       </thead>
       <tbody>
@@ -114,6 +97,8 @@ async function remove(id) {
           <td>{{ item.lng }}</td>
           <td>{{ item.lat }}</td>
           <td>{{ item.alt }}</td>
+          <td>{{ item.created_at }}</td>
+          <td>{{ item.updated_at }}</td>
         </tr>
       </tbody>
     </table>
