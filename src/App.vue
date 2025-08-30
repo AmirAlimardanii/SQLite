@@ -12,7 +12,6 @@ import {
 } from "@/services/dbService";
 
 const artists = ref([]);
-const invoices = ref([]);
 
 const newArtistName = ref("");
 const editArtistName = ref("");
@@ -20,16 +19,17 @@ const selectedArtistId = ref(null);
 
 onMounted(async () => {
   await importDatabaseFromServer(
-    "https://raw.githubusercontent.com/m79yashar/sqlitr-db/refs/heads/master/Chinook_part1.sqlite"
+    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/Chinook_part1_encrypted.txt"
 
     // "https://raw.githubusercontent.com/m79yashar/sqlitr-db/refs/heads/main/chinook.enc.txt"
     // 'https://raw.githubusercontent.com/eltechno/python_course/master/Chinook.sqlite'
   );
-  // artists.value = await getArtists(300)
-  invoices.value = await getInvoices();
-  console.log("invoices:", invoices.value);
+  artists.value = await getArtists();
+  console.log("artists:", artists.value);
 
-  await syncWithServer("https://raw.githubusercontent.com/m79yashar/sqlitr-db/refs/heads/main/");
+  // invoices.value = await getInvoices();
+
+  // await syncWithServer("https://raw.githubusercontent.com/m79yashar/sqlitr-db/refs/heads/main/");
 });
 
 async function add() {
@@ -66,61 +66,17 @@ async function remove(id) {
 <template>
   <div>
     <h1>مدیریت آرتیست‌ها</h1>
-    <!-- <button @click="downloadEncrypted">دانلود دیتابیس رمزگذاری‌شده</button> -->
-    <!-- <div>
-      <input v-model="newArtistName" placeholder="نام آرتیست جدید" />
-      <button @click="add">افزودن</button>
-    </div>
-
-    <div v-if="selectedArtistId">
-      <input v-model="editArtistName" placeholder="ویرایش نام آرتیست" />
-      <button @click="update">ثبت تغییرات</button>
-    </div>
-
-    <ul>
-      <li v-for="a in artists.reverse()" :key="a.id">
-        {{ a.id }} - {{ a.name }}
-        <button @click="selectForEdit(a)">ویرایش</button>
-        <button @click="remove(a.id)">حذف</button>
-      </li>
-    </ul> -->
-
     <table>
-      <caption>
-        add new
-      </caption>
       <thead>
         <tr>
           <th>id</th>
-          <th>customerId</th>
-          <th>date</th>
-          <th>billingAddress</th>
-          <th>billingCity</th>
-          <th>billingState</th>
-          <th>billingCountry</th>
-          <th>billingPostalCode</th>
-          <th>total</th>
-          <th>delete</th>
-          <th>edite</th>
+          <th>name</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in invoices" :key="item.InvoiceId">
-          <td>{{ item.InvoiceId }}</td>
-          <td>{{ item.CustomerId }}</td>
-          <td>{{ item.InvoiceDate }}</td>
-          <td>{{ item.BillingAddress }}</td>
-          <td>{{ item.BillingCity }}</td>
-          <td>{{ item.BillingState }}</td>
-          <td>{{ item.BillingCountry }}</td>
-          <td>{{ item.BillingPostalCode }}</td>
-          <td>{{ item.Total }}</td>
-          <td>
-            <button @click="remove(item.InvoiceId)">حذف</button>
-          </td>
-          <td>
-            <button @click="selectForEdit(item)">ویرایش</button>
-          </td>
+        <tr v-for="item in artists" :key="item.id">
+          <td>{{ item.id }}</td>
+          <td>{{ item.name }}</td>
         </tr>
       </tbody>
     </table>
