@@ -78,16 +78,42 @@ async function remove(id) {
     <table>
       <thead>
         <tr>
+          <th>index</th>
           <th>id</th>
+          <th>company</th>
+          <th>type</th>
           <th>name</th>
           <th>code</th>
+          <th>special</th>
+          <th>aquifer</th>
+          <th>river</th>
+          <th>village</th>
+          <th>status</th>
+          <th>study</th>
+          <th>tamab</th>
+          <th>lng</th>
+          <th>lat</th>
+          <th>alt</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in study" :key="item.id">
+        <tr v-for="(item, index) in study" :key="item.id">
+          <td>{{ index + 1 }}</td>
           <td>{{ item.id }}</td>
+          <td>{{ item.company }}</td>
+          <td>{{ item.type }}</td>
           <td>{{ item.name }}</td>
           <td>{{ item.code }}</td>
+          <td>{{ item.special }}</td>
+          <td>{{ item.aquifer }}</td>
+          <td>{{ item.river }}</td>
+          <td>{{ item.village }}</td>
+          <td>{{ item.status }}</td>
+          <td>{{ item.study }}</td>
+          <td>{{ item.tamab }}</td>
+          <td>{{ item.lng }}</td>
+          <td>{{ item.lat }}</td>
+          <td>{{ item.alt }}</td>
         </tr>
       </tbody>
     </table>

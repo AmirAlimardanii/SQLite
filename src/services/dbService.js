@@ -193,10 +193,28 @@ export async function getStudy(limit = 400) {
   if (!db) throw new Error("❌ Database not loaded yet");
 
   if (Capacitor.getPlatform() === "web") {
-    const res = db.exec(`SELECT id, name, code FROM studies LIMIT ${limit}`);
-    return res.length > 0 ? res[0].values.map(([id, name, code]) => ({ id, name, code })) : [];
+    const res = db.exec(`SELECT * FROM studies LIMIT ${limit}`);
+    return res.length > 0
+      ? res[0].values.map((row) => ({
+          id: row[0],
+          company: row[1],
+          type: row[2],
+          name: row[3],
+          code: row[4],
+          special: row[5],
+          aquifer: row[6],
+          river: row[7],
+          village: row[8],
+          status: row[9],
+          study: row[10],
+          tamab: row[11],
+          lng: row[12],
+          lat: row[13],
+          alt: row[14],
+        }))
+      : [];
   } else {
-    const res = await db.query(`SELECT id, name, code FROM studies LIMIT ${limit}`);
+    const res = await db.query(`SELECT * FROM studies LIMIT ${limit}`);
     return res.values;
   }
 }
