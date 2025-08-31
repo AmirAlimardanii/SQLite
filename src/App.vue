@@ -24,7 +24,7 @@ const selectedArtistId = ref(null);
 
 onMounted(async () => {
   await importDatabaseFromServer([
-    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/newSources_encrypted_v2.txt",
+    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/sources_encrypted_base64.txt",
   ]);
 
   const lastUpdate = await getLastUpdate();
