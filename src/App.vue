@@ -24,7 +24,7 @@ const selectedArtistId = ref(null);
 
 onMounted(async () => {
   await importDatabaseFromServer([
-    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/data_encrypted.txt",
+    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/data_encryptedN.txt",
   ]);
 
   const lastUpdate = await getLastUpdate();
@@ -36,7 +36,7 @@ onMounted(async () => {
 
   // حذف داده‌های قدیمی
   await deletedData(result.deletedData);
-await updateData([...(result?.updatedData || []), ...(result?.createData || [])]);
+  await updateData([...(result?.updatedData || []), ...(result?.createData || [])]);
   study.value = await getStudy();
 });
 

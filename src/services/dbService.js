@@ -502,7 +502,7 @@ export async function updateData(data) {
   for (const item of data) {
     await db.run(
       `INSERT INTO sources
-       (id, company, type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
+       (  id, company, type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          company     = excluded.company,
