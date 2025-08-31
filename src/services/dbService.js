@@ -398,7 +398,7 @@ export async function mockSyncApi(last_update) {
   // دیتای تستی
   const createData = [
     {
-      id: "10894",
+      id: 10894,
       company: "510",
       type: "22",
       name: "تست آپدیت شده",
@@ -417,7 +417,7 @@ export async function mockSyncApi(last_update) {
       updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
     },
     {
-      id: "108945",
+      id: 10895,
       company: "999",
       type: "99",
       name: "رکورد جدید",
@@ -442,7 +442,7 @@ export async function mockSyncApi(last_update) {
 
   const updateData = [
     {
-      id: "5556",
+      id: 5556,
       company: "510",
       type: "22",
       name: "تست آپدیت شده",
@@ -461,7 +461,7 @@ export async function mockSyncApi(last_update) {
       updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
     },
     {
-      id: "5557",
+      id: 5557,
       company: "999",
       type: "99",
       name: "رکورد جدید",
@@ -494,33 +494,20 @@ export async function deletedData(ids) {
 }
 
 export async function updateData(data) {
-  console.log("📦 Updating data:", data);
+  const columns = await db.exec(`PRAGMA table_info(sources)`);
+  const idColumn = columns[0].values.find((col) => col[1] === "id");
+  console.log("Type of id:", idColumn[2]); // ستون سوم، type هست
 
   if (!db) throw new Error("❌ Database not loaded yet");
   if (!data || data.length === 0) return;
 
+  console.log(data);
+
   for (const item of data) {
     await db.run(
-      `INSERT INTO sources
-       (  id, company, type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         company     = excluded.company,
-         type        = excluded.type,
-         name        = excluded.name,
-         code        = excluded.code,
-         special     = excluded.special,
-         aquifer     = excluded.aquifer,
-         river       = excluded.river,
-         village     = excluded.village,
-         status      = excluded.status,
-         study       = excluded.study,
-         tamab       = excluded.tamab,
-         lng         = excluded.lng,
-         lat         = excluded.lat,
-         alt         = excluded.alt,
-         created_at  = excluded.created_at,
-         updated_at  = excluded.updated_at`,
+      `INSERT OR REPLACE INTO sources
+        (id, company, type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         item.id,
         item.company,
