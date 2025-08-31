@@ -196,7 +196,7 @@ export async function getStudy(limit = 100000) {
     return res.length > 0
       ? res[0].values.map((row) => ({
           id: row[0],
-          company: row[1],
+          comapny: row[1],
           type: row[2],
           name: row[3],
           code: row[4],
@@ -398,8 +398,8 @@ export async function mockSyncApi(last_update) {
   // دیتای تستی
   const createData = [
     {
-      id: 10894,
-      company: "510",
+      id: 5556,
+      comapny: "510",
       type: "22",
       name: "تست آپدیت شده",
       code: "",
@@ -417,10 +417,10 @@ export async function mockSyncApi(last_update) {
       updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
     },
     {
-      id: 10895,
-      company: "999",
+      id: 5557,
+      comapny: "999",
       type: "99",
-      name: "رکورد جدید",
+      name: "آپدیت2",
       code: "NEW-001",
       special: "0",
       aquifer: "X",
@@ -443,7 +443,7 @@ export async function mockSyncApi(last_update) {
   const updateData = [
     {
       id: 10895,
-      company: "510",
+      comapny: "510",
       type: "22",
       name: "رکورد 3",
       code: "",
@@ -462,7 +462,7 @@ export async function mockSyncApi(last_update) {
     },
     {
       id: 10894,
-      company: "999",
+      comapny: "999",
       type: "99",
       name: "رکورد 4",
       code: "NEW-001",
@@ -506,11 +506,11 @@ export async function updateData(data) {
   for (const item of data) {
     await db.run(
       `INSERT OR REPLACE INTO sources
-        (id, company, type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
+        (id, comapny, type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         item.id,
-        item.company,
+        item.comapny,
         item.type,
         item.name,
         item.code,
