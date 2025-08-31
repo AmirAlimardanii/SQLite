@@ -390,3 +390,156 @@ export async function syncWithServer(apiUrl) {
   //     throw err
   //   }
 }
+
+// mockApi.js
+export async function mockSyncApi(last_update) {
+  console.log("📡 Mock API called with last_update:", last_update);
+
+  // دیتای تستی
+  const createData = [
+    {
+      id: "10894",
+      company: "510",
+      type: "22",
+      name: "تست آپدیت شده",
+      code: "",
+      special: "1",
+      aquifer: "",
+      river: "هریرود",
+      village: "ابراهیم بای",
+      status: "1",
+      study: "6009",
+      tamab: "",
+      lng: "61.2606353",
+      lat: "35.6185029",
+      alt: "",
+      created_at: "2025-03-04 10:11:32",
+      updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
+    },
+    {
+      id: "108945",
+      company: "999",
+      type: "99",
+      name: "رکورد جدید",
+      code: "NEW-001",
+      special: "0",
+      aquifer: "X",
+      river: "Y",
+      village: "Z",
+      status: "1",
+      study: "7777",
+      tamab: "",
+      lng: "60.0000",
+      lat: "35.0000",
+      alt: "100",
+      created_at: "2025-09-01 12:05:00",
+      updated_at: "2025-09-01 12:05:00",
+    },
+  ];
+
+  // آی‌دی‌هایی که حذف شده‌اند
+  const deletedData = ["5554", "5555"];
+
+  const updateData = [
+    {
+      id: "5556",
+      company: "510",
+      type: "22",
+      name: "تست آپدیت شده",
+      code: "",
+      special: "1",
+      aquifer: "",
+      river: "هریرود",
+      village: "ابراهیم بای",
+      status: "1",
+      study: "6009",
+      tamab: "",
+      lng: "61.2606353",
+      lat: "35.6185029",
+      alt: "",
+      created_at: "2025-03-04 10:11:32",
+      updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
+    },
+    {
+      id: "5557",
+      company: "999",
+      type: "99",
+      name: "رکورد جدید",
+      code: "NEW-001",
+      special: "0",
+      aquifer: "X",
+      river: "Y",
+      village: "Z",
+      status: "1",
+      study: "7777",
+      tamab: "",
+      lng: "60.0000",
+      lat: "35.0000",
+      alt: "100",
+      created_at: "2025-09-01 12:05:00",
+      updated_at: "2025-09-01 12:05:00",
+    },
+  ];
+
+  return { createData, deletedData, updateData };
+}
+
+export async function deletedData(ids) {
+  if (!ids || ids.length === 0) return;
+
+  const placeholders = ids.map(() => "?").join(",");
+  const query = `DELETE FROM sources WHERE id IN (${placeholders})`;
+
+  await db.run(query, ids);
+}
+
+export async function updateData(data) {
+  console.log("📦 Updating data:", data);
+
+  if (!db) throw new Error("❌ Database not loaded yet");
+  if (!data || data.length === 0) return;
+
+  for (const item of data) {
+    await db.run(
+      `INSERT INTO sources
+       (id, company, type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         company     = excluded.company,
+         type        = excluded.type,
+         name        = excluded.name,
+         code        = excluded.code,
+         special     = excluded.special,
+         aquifer     = excluded.aquifer,
+         river       = excluded.river,
+         village     = excluded.village,
+         status      = excluded.status,
+         study       = excluded.study,
+         tamab       = excluded.tamab,
+         lng         = excluded.lng,
+         lat         = excluded.lat,
+         alt         = excluded.alt,
+         created_at  = excluded.created_at,
+         updated_at  = excluded.updated_at`,
+      [
+        item.id,
+        item.company,
+        item.type,
+        item.name,
+        item.code,
+        item.special,
+        item.aquifer,
+        item.river,
+        item.village,
+        item.status,
+        item.study,
+        item.tamab,
+        item.lng,
+        item.lat,
+        item.alt,
+        item.created_at,
+        item.updated_at,
+      ]
+    );
+  }
+}

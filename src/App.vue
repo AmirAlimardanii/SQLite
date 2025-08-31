@@ -10,6 +10,9 @@ import {
   getInvoices,
   getStudy,
   getLastUpdate,
+  mockSyncApi,
+  deletedData,
+  updateData,
 } from "@/services/dbService";
 
 const artists = ref([]);
@@ -24,10 +27,17 @@ onMounted(async () => {
     "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/data_encrypted.txt",
   ]);
 
-  study.value = await getStudy();
-
   const lastUpdate = await getLastUpdate();
   console.log("Last update:", lastUpdate);
+
+  // اینجا کال کن
+  const result = await mockSyncApi(lastUpdate);
+  console.log("📥 دریافت از mock API:", result);
+
+  // حذف داده‌های قدیمی
+  await deletedData(result.deletedData);
+await updateData([...(result?.updatedData || []), ...(result?.createData || [])]);
+  study.value = await getStudy();
 });
 
 async function add() {
@@ -55,6 +65,10 @@ async function remove(id) {
   await deleteArtist(id);
   artists.value = await getArtists(300);
 }
+
+// const lastTime = await getLastUpdate();
+// const result = await mockSyncApi(lastTime);
+// console.log("📥 دریافت از mock API:", result);
 </script>
 
 <template>
