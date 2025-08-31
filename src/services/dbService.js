@@ -172,8 +172,6 @@ export async function importDatabaseFromServer(urls) {
 
       db = mainDb;
       console.log("✅ Merged DB downloaded & saved");
-
-      return myTime5;
     }
   }
 }
