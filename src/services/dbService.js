@@ -442,10 +442,10 @@ export async function mockSyncApi(last_update) {
 
   const updateData = [
     {
-      id: 5556,
+      id: 10895,
       company: "510",
       type: "22",
-      name: "تست آپدیت شده",
+      name: "رکورد 3",
       code: "",
       special: "1",
       aquifer: "",
@@ -461,10 +461,10 @@ export async function mockSyncApi(last_update) {
       updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
     },
     {
-      id: 5557,
+      id: 10894,
       company: "999",
       type: "99",
-      name: "رکورد جدید",
+      name: "رکورد 4",
       code: "NEW-001",
       special: "0",
       aquifer: "X",
