@@ -148,9 +148,27 @@ export async function importDatabaseFromServer(urls) {
         const values = rows[0].values;
 
         // ایجاد جدول اگر هنوز ساخته نشده
-        mainDb.exec(
-          `CREATE TABLE IF NOT EXISTS sources (${columns.map((c) => `"${c}" TEXT`).join(", ")})`
-        );
+        mainDb.exec(`
+  CREATE TABLE IF NOT EXISTS sources (
+    id INTEGER PRIMARY KEY,
+    comapny  TEXT,
+    type TEXT,
+    name TEXT,
+    code TEXT,
+    special TEXT,
+    aquifer TEXT,
+    river TEXT,
+    village TEXT,
+    status TEXT,
+    study TEXT,
+    tamab TEXT,
+    lng TEXT,
+    lat TEXT,
+    alt TEXT,
+    created_at TEXT,
+    updated_at TEXT
+  )
+`);
 
         // درج داده‌ها
         const stmt = mainDb.prepare(
@@ -442,10 +460,10 @@ export async function mockSyncApi(last_update) {
 
   const updateData = [
     {
-      id: 10895,
+      id: "5558",
       comapny: "510",
       type: "22",
-      name: "رکورد 3",
+      name: "تست string اپدیت",
       code: "",
       special: "1",
       aquifer: "",
@@ -461,10 +479,10 @@ export async function mockSyncApi(last_update) {
       updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
     },
     {
-      id: 10894,
+      id: 2,
       comapny: "999",
-      type: "99",
-      name: "رکورد 4",
+      type: "454",
+      name: "رکورد 222",
       code: "NEW-001",
       special: "0",
       aquifer: "X",
@@ -506,7 +524,7 @@ export async function updateData(data) {
   for (const item of data) {
     await db.run(
       `INSERT OR REPLACE INTO sources
-        (id, comapny, type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
+        (id, comapny , type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         item.id,

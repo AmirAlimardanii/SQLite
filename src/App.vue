@@ -24,7 +24,7 @@ const selectedArtistId = ref(null);
 
 onMounted(async () => {
   await importDatabaseFromServer([
-    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/sources_encrypted_base64.txt",
+    "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/newSources_encrypted_v2.txt",
   ]);
 
   const lastUpdate = await getLastUpdate();
@@ -79,7 +79,7 @@ async function remove(id) {
         <tr>
           <th>index</th>
           <th>id</th>
-          <th>company</th>
+          <th>comapny </th>
           <th>type</th>
           <th>name</th>
           <th>code</th>
@@ -101,7 +101,7 @@ async function remove(id) {
         <tr v-for="(item, index) in study" :key="item.id">
           <td>{{ index + 1 }}</td>
           <td>{{ item.id }}</td>
-          <td>{{ item.comapny }}</td>
+          <td>{{ item.comapny  }}</td>
           <td>{{ item.type }}</td>
           <td>{{ item.name }}</td>
           <td>{{ item.code }}</td>
