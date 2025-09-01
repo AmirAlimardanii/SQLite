@@ -11,7 +11,7 @@ import {
 
 const study = ref([]);
 const users = ref([]);
-const activeTab = ref('sources'); // برای مدیریت تب‌ها
+const activeTab = ref("sources"); // برای مدیریت تب‌ها
 
 const databases = {
   sources: {
@@ -38,7 +38,7 @@ const databases = {
   },
   users: {
     urls: [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/users.db.enc.base64",
+      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/users_encrypted_base64.txt",
     ],
     id: "INTEGER PRIMARY KEY",
     user_name: "TEXT",
@@ -52,37 +52,31 @@ onMounted(async () => {
   await importDatabaseFromServer(databases);
 
   // بارگذاری داده‌های sources
-  const lastUpdate = await getLastUpdate('sources');
+  const lastUpdate = await getLastUpdate("sources");
   console.log("Last update:", lastUpdate);
 
   const result = await mockSyncApi(lastUpdate);
   console.log("📥 دریافت از mock API:", result);
 
-  await deletedData('sources', result.deletedData);
-  await updateData('sources', result.updateData.concat(result.createData));
-  
+  await deletedData("sources", result.deletedData);
+  await updateData("sources", result.updateData.concat(result.createData));
+
   // بارگذاری هر دو جدول
-  study.value = await getTableData('sources');
-  users.value = await getTableData('users');
+  study.value = await getTableData("sources");
+  users.value = await getTableData("users");
 });
 </script>
 
 <template>
   <div>
     <h1>مدیریت داده‌ها</h1>
-    
+
     <!-- تب‌ها برای切换 بین جداول -->
     <div class="tabs">
-      <button 
-        :class="{ active: activeTab === 'sources' }" 
-        @click="activeTab = 'sources'"
-      >
+      <button :class="{ active: activeTab === 'sources' }" @click="activeTab = 'sources'">
         منابع (Sources)
       </button>
-      <button 
-        :class="{ active: activeTab === 'users' }" 
-        @click="activeTab = 'users'"
-      >
+      <button :class="{ active: activeTab === 'users' }" @click="activeTab = 'users'">
         کاربران (Users)
       </button>
     </div>
@@ -200,9 +194,9 @@ tr:nth-child(even) {
 }
 
 .tabs button.active {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
-  border-color: #4CAF50;
+  border-color: #4caf50;
 }
 
 .tabs button:hover {
