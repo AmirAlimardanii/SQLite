@@ -1,6 +1,5 @@
 import { Capacitor } from "@capacitor/core";
 import initSqlJs from "sql.js";
-import { SQLiteConnection } from "@capacitor-community/sqlite";
 import CryptoJS from "crypto-js";
 
 const ENCRYPTION_KEY = "MySecretKey12345";
@@ -12,6 +11,7 @@ function uint8ArrayToBase64(uint8Array) {
   for (let i = 0; i < len; i++) binary += String.fromCharCode(uint8Array[i]);
   return btoa(binary);
 }
+
 function base64ToUint8Array(base64) {
   const binary = atob(base64);
   const len = binary.length;
@@ -62,62 +62,9 @@ async function loadFromIndexedDB() {
 }
 
 let db = null;
-let sqlite = null;
 
 // --- دریافت و لود دیتابیس ---
-export async function importDatabaseFromServer1(urls) {
-  if (Capacitor.getPlatform() === "web") {
-    const SQL = await initSqlJs({
-      locateFile: (file) => `/sql-wasm.wasm`,
-    });
-
-    const savedDb = await loadFromIndexedDB();
-    if (savedDb) {
-      db = new SQL.Database(savedDb);
-      console.log("✅ Chinook DB loaded (plain) from IndexedDB");
-      return;
-    }
-
-    for (const url of urls) {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("❌ Failed to download DB");
-      const encryptedText = await response.text();
-
-      const decrypted = decryptData(encryptedText);
-      console.log(decrypted, "decrypted");
-    }
-    await saveToIndexedDB(decrypted);
-
-    // db = new SQL.Database(decrypted);
-    console.log("✅ Chinook DB downloaded & decrypted from server");
-  } else {
-    const { Filesystem, Directory } = await import("@capacitor/filesystem");
-    for (const url of urls) {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("❌ Failed to download DB");
-      const encryptedText = await response.text();
-
-      const decrypted = decryptData(encryptedText);
-      console.log(decrypted, "decrypted");
-      await saveToIndexedDB(decrypted);
-    }
-
-    const base64 = uint8ArrayToBase64(decrypted);
-
-    await Filesystem.writeFile({
-      path: "chinook.sqlite",
-      data: base64,
-      directory: Directory.Data,
-    });
-
-    sqlite = new SQLiteConnection();
-    const ret = await sqlite.createConnection("chinook", false, "no-encryption", 1);
-    db = ret;
-    await db.open();
-  }
-}
-
-export async function importDatabaseFromServer(urls) {
+export async function importDatabaseFromServer(databases) {
   if (Capacitor.getPlatform() === "web") {
     const SQL = await initSqlJs({
       locateFile: (file) => `/sql-wasm.wasm`,
@@ -133,287 +80,112 @@ export async function importDatabaseFromServer(urls) {
     // دیتابیس نهایی
     const mainDb = new SQL.Database();
 
-    for (let i = 0; i < urls.length; i++) {
-      const response = await fetch(urls[i]);
-      if (!response.ok) throw new Error("❌ Failed to download DB");
-      const encryptedText = await response.text();
+    // برای هر جدول در databases
+    for (const [tableName, tableConfig] of Object.entries(databases)) {
+      const { urls, ...columns } = tableConfig;
 
-      const decrypted = decryptData(encryptedText);
-      const tempDb = new SQL.Database(decrypted);
+      // ایجاد جدول اگر وجود ندارد
+      const columnDefinitions = Object.entries(columns)
+        .map(([colName, colType]) => `"${colName}" ${colType}`)
+        .join(", ");
 
-      // فرض بر اینه که جدول‌ها اسمشون sources هست
-      const rows = tempDb.exec("SELECT * FROM sources");
-      if (rows.length > 0) {
-        const columns = rows[0].columns;
-        const values = rows[0].values;
-
-        // ایجاد جدول اگر هنوز ساخته نشده
-        mainDb.exec(`
-  CREATE TABLE IF NOT EXISTS sources (
-    id INTEGER PRIMARY KEY,
-    comapny  TEXT,
-    type TEXT,
-    name TEXT,
-    code TEXT,
-    special TEXT,
-    aquifer TEXT,
-    river TEXT,
-    village TEXT,
-    status TEXT,
-    study TEXT,
-    tamab TEXT,
-    lng TEXT,
-    lat TEXT,
-    alt TEXT,
-    created_at TEXT,
-    updated_at TEXT
-  )
-`);
-
-        // درج داده‌ها
-        const stmt = mainDb.prepare(
-          `INSERT INTO sources (${columns.map((c) => `"${c}"`).join(", ")}) VALUES (${columns
-            .map(() => "?")
-            .join(", ")})`
-        );
-        for (const row of values) {
-          stmt.run(row);
-        }
-        stmt.free();
-      }
-
-      tempDb.close();
-
-      // ذخیره دیتابیس نهایی
-      const mergedBinary = mainDb.export();
-      await saveToIndexedDB(mergedBinary);
-
-      db = mainDb;
-      console.log("✅ Merged DB downloaded & saved");
-    }
-  }
-}
-// --- CRUD Artist ---
-export async function getArtists(limit = 10) {
-  if (!db) throw new Error("❌ Database not loaded yet");
-
-  if (Capacitor.getPlatform() === "web") {
-    const res = db.exec(`SELECT ArtistId, Name FROM Artist LIMIT ${limit}`);
-    return res.length > 0 ? res[0].values.map(([id, name]) => ({ id, name })) : [];
-  } else {
-    const res = await db.query(`SELECT ArtistId, Name FROM Artist LIMIT ${limit}`);
-    return res.values;
-  }
-}
-
-export async function getStudy(limit = 100000) {
-  if (!db) throw new Error("❌ Database not loaded yet");
-
-  if (Capacitor.getPlatform() === "web") {
-    const res = db.exec(`SELECT * FROM sources ORDER BY updated_at DESC LIMIT ${limit}`);
-    return res.length > 0
-      ? res[0].values.map((row) => ({
-          id: row[0],
-          comapny: row[1],
-          type: row[2],
-          name: row[3],
-          code: row[4],
-          special: row[5],
-          aquifer: row[6],
-          river: row[7],
-          village: row[8],
-          status: row[9],
-          study: row[10],
-          tamab: row[11],
-          lng: row[12],
-          lat: row[13],
-          alt: row[14],
-          created_at: row[15],
-          updated_at: row[16],
-        }))
-      : [];
-  } else {
-    const res = await db.query(`SELECT * FROM sources ORDER BY updated_at DESC LIMIT ${limit}`);
-    return res.values;
-  }
-}
-
-export async function getLastUpdate() {
-  if (!db) throw new Error("❌ Database not loaded yet");
-
-  if (Capacitor.getPlatform() === "web") {
-    const res = db.exec(`SELECT MAX(updated_at) AS last_update FROM sources`);
-    return res.length > 0 ? res[0].values[0] : null;
-  } else {
-    const res = await db.query(`SELECT MAX(updated_at) AS last_update FROM sources`);
-    return res.values.length > 0 ? res.values[0] : null;
-  }
-}
-
-export async function getInvoices(limit = 415) {
-  if (!db) throw new Error("❌ Database not loaded yet");
-
-  if (Capacitor.getPlatform() === "web") {
-    // INSERT INTO Invoice (
-
-    const res = db.exec(
-      `SELECT InvoiceId, CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode, Total FROM Invoice LIMIT ${limit}`
-    );
-    return res.length > 0
-      ? res[0].values.map(
-          ([
-            InvoiceId,
-            CustomerId,
-            InvoiceDate,
-            BillingAddress,
-            BillingCity,
-            BillingState,
-            BillingCountry,
-            BillingPostalCode,
-            Total,
-          ]) => ({
-            InvoiceId,
-            CustomerId,
-            InvoiceDate,
-            BillingAddress,
-            BillingCity,
-            BillingState,
-            BillingCountry,
-            BillingPostalCode,
-            Total,
-          })
+      mainDb.exec(`
+        CREATE TABLE IF NOT EXISTS "${tableName}" (
+          ${columnDefinitions}
         )
-      : [];
+      `);
+
+      // پردازش هر URL برای این جدول
+      for (let i = 0; i < urls.length; i++) {
+        try {
+          const response = await fetch(urls[i]);
+          if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
+          const encryptedText = await response.text();
+
+          const decrypted = decryptData(encryptedText);
+          const tempDb = new SQL.Database(decrypted);
+
+          // خواندن داده‌ها از جدول متناظر
+          const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+
+          if (rows.length > 0) {
+            const sourceColumns = rows[0].columns;
+            const values = rows[0].values;
+
+            // درج داده‌ها
+            const stmt = mainDb.prepare(
+              `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
+                .map((c) => `"${c}"`)
+                .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
+            );
+
+            for (const row of values) {
+              stmt.run(row);
+            }
+            stmt.free();
+          }
+
+          tempDb.close();
+          console.log(`✅ Table ${tableName} loaded from URL ${i + 1}/${urls.length}`);
+        } catch (error) {
+          console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
+        }
+      }
+    }
+
+    // ذخیره دیتابیس نهایی
+    const mergedBinary = mainDb.export();
+    await saveToIndexedDB(mergedBinary);
+
+    db = mainDb;
+    console.log("✅ All tables merged & saved to IndexedDB");
+  }
+}
+
+// --- دریافت داده‌های جدول ---
+export async function getTableData(tableName, limit = 100000) {
+  if (!db) throw new Error("❌ Database not loaded yet");
+
+  if (Capacitor.getPlatform() === "web") {
+    // برای جدول users ممکن است updated_at وجود نداشته باشد
+    const orderBy = tableName === "users" ? "id" : "updated_at";
+    const res = db.exec(`SELECT * FROM "${tableName}" ORDER BY ${orderBy} DESC LIMIT ${limit}`);
+
+    if (res.length === 0) return [];
+
+    return res[0].values.map((row) => {
+      const obj = {};
+      res[0].columns.forEach((col, index) => {
+        obj[col] = row[index];
+      });
+      return obj;
+    });
   } else {
+    const orderBy = tableName === "users" ? "id" : "updated_at";
     const res = await db.query(
-      `SELECT InvoiceId, CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode, Total FROM Invoice LIMIT ${limit}`
+      `SELECT * FROM "${tableName}" ORDER BY ${orderBy} DESC LIMIT ${limit}`
     );
     return res.values;
   }
 }
 
-export async function addArtist(name) {
+// --- دریافت آخرین تاریخ بروزرسانی ---
+export async function getLastUpdate(tableName) {
   if (!db) throw new Error("❌ Database not loaded yet");
 
   if (Capacitor.getPlatform() === "web") {
-    db.run(`INSERT INTO Artist (Name) VALUES (?)`, [name]);
-    await saveToIndexedDB(db.export());
+    const res = db.exec(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
+    return res.length > 0 ? res[0].values[0][0] : null;
   } else {
-    await db.run(`INSERT INTO Artist (Name) VALUES (?)`, [name]);
+    const res = await db.query(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
+    return res.values.length > 0 ? res.values[0].last_update : null;
   }
 }
 
-export async function updateArtist(id, newName) {
-  if (!db) throw new Error("❌ Database not loaded yet");
-
-  if (Capacitor.getPlatform() === "web") {
-    db.run(`UPDATE Artist SET Name = ? WHERE ArtistId = ?`, [newName, id]);
-    await saveToIndexedDB(db.export());
-  } else {
-    await db.run(`UPDATE Artist SET Name = ? WHERE ArtistId = ?`, [newName, id]);
-  }
-}
-
-export async function deleteArtist(id) {
-  if (!db) throw new Error("❌ Database not loaded yet");
-
-  if (Capacitor.getPlatform() === "web") {
-    db.run(`DELETE FROM Artist WHERE ArtistId = ?`, [id]);
-    await saveToIndexedDB(db.export());
-  } else {
-    await db.run(`DELETE FROM Artist WHERE ArtistId = ?`, [id]);
-  }
-}
-
-// --- گرفتن آخرین تاریخ فاکتور ---
-export async function getLastInvoiceDate() {
-  if (!db) throw new Error("❌ Database not loaded yet");
-
-  if (Capacitor.getPlatform() === "web") {
-    const res = db.exec(`SELECT InvoiceId FROM Invoice ORDER BY InvoiceId DESC LIMIT 1`);
-    return res.length > 0 && res[0].values.length > 0 ? res[0].values[0][0] : null;
-  } else {
-    const res = await db.query(`SELECT InvoiceDate FROM Invoice ORDER BY InvoiceDate DESC LIMIT 1`);
-    return res.values.length > 0 ? res.values[0].InvoiceDate : null;
-  }
-}
-
-// --- درج رکورد جدید در Invoice ---
-async function insertInvoice(record) {
-  if (Capacitor.getPlatform() === "web") {
-    db.run(
-      `INSERT INTO Invoice (InvoiceId, CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode, Total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        record.InvoiceId,
-        record.CustomerId,
-        record.InvoiceDate,
-        record.BillingAddress,
-        record.BillingCity,
-        record.BillingState,
-        record.BillingCountry,
-        record.BillingPostalCode,
-        record.Total,
-      ]
-    );
-    await saveToIndexedDB(db.export());
-  } else {
-    await db.run(
-      `INSERT INTO Invoice (InvoiceId, CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode, Total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        record.InvoiceId,
-        record.CustomerId,
-        record.InvoiceDate,
-        record.BillingAddress,
-        record.BillingCity,
-        record.BillingState,
-        record.BillingCountry,
-        record.BillingPostalCode,
-        record.Total,
-      ]
-    );
-  }
-}
-
-// --- سینک با سرور ---
-export async function syncWithServer(apiUrl) {
-  const lastDate = await getLastInvoiceDate();
-  console.log("⏳ Last invoice date:", lastDate);
-  if (!lastDate) {
-    console.log("⏳ No invoices found.");
-    return;
-  }
-  //   try {
-  //     const response = await fetch(apiUrl, {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ last_update: lastDate })
-  //     })
-
-  //     if (!response.ok) throw new Error('❌ Failed to sync with server')
-
-  //     const updates = await response.json()
-  //     console.log('📦 Updates from server:', updates)
-
-  //     for (const invoice of updates) {
-  //       await insertInvoice(invoice)
-  //     }
-
-  //     console.log(`✅ ${updates.length} new invoices added to local DB.`)
-  //     return updates
-
-  //   } catch (err) {
-  //     console.error('❌ Sync error:', err)
-  //     throw err
-  //   }
-}
-
-// mockApi.js
+// --- mock API برای سینک ---
 export async function mockSyncApi(last_update) {
   console.log("📡 Mock API called with last_update:", last_update);
 
-  // دیتای تستی
   const createData = [
     {
       id: 5556,
@@ -432,30 +204,10 @@ export async function mockSyncApi(last_update) {
       lat: "35.6185029",
       alt: "",
       created_at: "2025-03-04 10:11:32",
-      updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
-    },
-    {
-      id: 5557,
-      comapny: "999",
-      type: "99",
-      name: "آپدیت2",
-      code: "NEW-001",
-      special: "0",
-      aquifer: "X",
-      river: "Y",
-      village: "Z",
-      status: "1",
-      study: "7777",
-      tamab: "",
-      lng: "60.0000",
-      lat: "35.0000",
-      alt: "100",
-      created_at: "2025-09-01 12:05:00",
-      updated_at: "2025-09-01 12:05:00",
+      updated_at: "2025-09-01 12:00:00",
     },
   ];
 
-  // آی‌دی‌هایی که حذف شده‌اند
   const deletedData = ["5554", "5555"];
 
   const updateData = [
@@ -476,75 +228,45 @@ export async function mockSyncApi(last_update) {
       lat: "35.6185029",
       alt: "",
       created_at: "2025-03-04 10:11:32",
-      updated_at: "2025-09-01 12:00:00", // جدیدتر از last_update
-    },
-    {
-      id: 2,
-      comapny: "999",
-      type: "454",
-      name: "رکورد 222",
-      code: "NEW-001",
-      special: "0",
-      aquifer: "X",
-      river: "Y",
-      village: "Z",
-      status: "1",
-      study: "7777",
-      tamab: "",
-      lng: "60.0000",
-      lat: "35.0000",
-      alt: "100",
-      created_at: "2025-09-01 12:05:00",
-      updated_at: "2025-09-01 12:05:00",
+      updated_at: "2025-09-01 12:00:00",
     },
   ];
 
   return { createData, deletedData, updateData };
 }
 
-export async function deletedData(ids) {
+// --- حذف داده‌ها ---
+export async function deletedData(tableName, ids) {
   if (!ids || ids.length === 0) return;
+  if (!db) throw new Error("❌ Database not loaded yet");
 
   const placeholders = ids.map(() => "?").join(",");
-  const query = `DELETE FROM sources WHERE id IN (${placeholders})`;
+  const query = `DELETE FROM "${tableName}" WHERE id IN (${placeholders})`;
 
-  await db.run(query, ids);
+  db.run(query, ids);
+  await saveToIndexedDB(db.export());
 }
 
-export async function updateData(data) {
-  const columns = await db.exec(`PRAGMA table_info(sources)`);
-  const idColumn = columns[0].values.find((col) => col[1] === "id");
-  console.log("Type of id:", idColumn[2]); // ستون سوم، type هست
-
+// --- بروزرسانی داده‌ها ---
+export async function updateData(tableName, data) {
   if (!db) throw new Error("❌ Database not loaded yet");
   if (!data || data.length === 0) return;
 
-  console.log(data);
+  // دریافت نام ستون‌ها از جدول
+  const tableInfo = db.exec(`PRAGMA table_info("${tableName}")`);
+  const columns = tableInfo[0].values.map((row) => row[1]);
 
   for (const item of data) {
-    await db.run(
-      `INSERT OR REPLACE INTO sources
-        (id, comapny , type, name, code, special, aquifer, river, village, status, study, tamab, lng, lat, alt, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        item.id,
-        item.comapny,
-        item.type,
-        item.name,
-        item.code,
-        item.special,
-        item.aquifer,
-        item.river,
-        item.village,
-        item.status,
-        item.study,
-        item.tamab,
-        item.lng,
-        item.lat,
-        item.alt,
-        item.created_at,
-        item.updated_at,
-      ]
+    const values = columns.map((col) => item[col] || null);
+    const placeholders = columns.map(() => "?").join(", ");
+
+    db.run(
+      `INSERT OR REPLACE INTO "${tableName}" (${columns
+        .map((c) => `"${c}"`)
+        .join(", ")}) VALUES (${placeholders})`,
+      values
     );
   }
+
+  await saveToIndexedDB(db.export());
 }
