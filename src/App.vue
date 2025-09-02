@@ -5,13 +5,14 @@ import {
   getTableData,
   getLastUpdate,
   mockSyncApi,
-  deletedData,
-  updateData,
+  deleteRecords,
+  upsertRecords,
+  getRecordById
 } from "@/services/dbService";
 
 const study = ref([]);
 const users = ref([]);
-const activeTab = ref("sources"); // برای مدیریت تب‌ها
+const activeTab = ref("sources");
 
 const databases = {
   sources: {
@@ -49,21 +50,69 @@ const databases = {
 };
 
 onMounted(async () => {
-  await importDatabaseFromServer(databases);
+  try {
+    // 1. ایمپورت دیتابیس
+    await importDatabaseFromServer(databases);
+    
+    // 2. دریافت آخرین تاریخ بروزرسانی برای هر جدول
+    const sourcesLastUpdate = await getLastUpdate("sources");
+    const usersLastUpdate = await getLastUpdate("users");
+    
+    console.log("Last update - Sources:", sourcesLastUpdate);
+    console.log("Last update - Users:", usersLastUpdate);
 
-  // بارگذاری داده‌های sources
-  const lastUpdate = await getLastUpdate("sources");
-  console.log("Last update:", lastUpdate);
+    // 3. استفاده از mock API برای هر جدول
+    const sourcesSync = await mockSyncApi("sources", sourcesLastUpdate);
+    const usersSync = await mockSyncApi("users", usersLastUpdate);
 
-  const result = await mockSyncApi(lastUpdate);
-  console.log("📥 دریافت از mock API:", result);
+    console.log("Sources sync data:", sourcesSync);
+    console.log("Users sync data:", usersSync);
 
-  await deletedData("sources", result.deletedData);
-  await updateData("sources", result.updateData.concat(result.createData));
+    // 4. پردازش نتایج سینک
+    if (sourcesSync.deletedData && sourcesSync.deletedData.length > 0) {
+      await deleteRecords("sources", sourcesSync.deletedData);
+    }
+    
+    if (sourcesSync.updateData || sourcesSync.createData) {
+      const allSourcesData = [
+        ...(sourcesSync.updateData || []),
+        ...(sourcesSync.createData || [])
+      ];
+      if (allSourcesData.length > 0) {
+        await upsertRecords("sources", allSourcesData);
+      }
+    }
 
-  // بارگذاری هر دو جدول
-  study.value = await getTableData("sources");
-  users.value = await getTableData("users");
+    if (usersSync.deletedData && usersSync.deletedData.length > 0) {
+      await deleteRecords("users", usersSync.deletedData);
+    }
+    
+    if (usersSync.updateData || usersSync.createData) {
+      const allUsersData = [
+        ...(usersSync.updateData || []),
+        ...(usersSync.createData || [])
+      ];
+      if (allUsersData.length > 0) {
+        await upsertRecords("users", allUsersData);
+      }
+    }
+
+    // 5. بارگذاری داده‌ها برای نمایش
+    study.value = await getTableData("sources");
+    users.value = await getTableData("users");
+
+    console.log("Sources loaded:", study.value.length);
+    console.log("Users loaded:", users.value.length);
+
+    // 6. تست توابع اضافی (اختیاری)
+    // const sourceRecord = await getRecordById("sources", 5556);
+    // const userRecord = await getRecordById("users", 1001);
+    // console.log("Sample source record:", sourceRecord);
+    // console.log("Sample user record:", userRecord);
+
+  } catch (error) {
+    console.error("Error in onMounted:", error);
+  }
 });
 </script>
 
@@ -74,17 +123,20 @@ onMounted(async () => {
     <!-- تب‌ها برای切换 بین جداول -->
     <div class="tabs">
       <button :class="{ active: activeTab === 'sources' }" @click="activeTab = 'sources'">
-        منابع (Sources)
+        منابع (Sources) - {{ study.length }} رکورد
       </button>
       <button :class="{ active: activeTab === 'users' }" @click="activeTab = 'users'">
-        کاربران (Users)
+        کاربران (Users) - {{ users.length }} رکورد
       </button>
     </div>
 
     <!-- جدول sources -->
     <div v-if="activeTab === 'sources'">
       <h2>جدول منابع</h2>
-      <table>
+      <div v-if="study.length === 0" class="no-data">
+        داده‌ای برای نمایش وجود ندارد
+      </div>
+      <table v-else>
         <thead>
           <tr>
             <th>index</th>
@@ -135,7 +187,10 @@ onMounted(async () => {
     <!-- جدول users -->
     <div v-if="activeTab === 'users'">
       <h2>جدول کاربران</h2>
-      <table>
+      <div v-if="users.length === 0" class="no-data">
+        داده‌ای برای نمایش وجود ندارد
+      </div>
+      <table v-else>
         <thead>
           <tr>
             <th>index</th>
@@ -205,5 +260,12 @@ tr:nth-child(even) {
 
 .tabs button.active:hover {
   background-color: #45a049;
+}
+
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
 }
 </style>
