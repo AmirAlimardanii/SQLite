@@ -1,4 +1,9 @@
+<template>
+  <div>{{ study }}</div>
+</template>
+
 <script setup>
+import { RECORDS } from "../pumps3_min.json";
 import { ref, onMounted } from "vue";
 import {
   importDatabaseFromServer,
@@ -7,45 +12,36 @@ import {
   mockSyncApi,
   deleteRecords,
   upsertRecords,
-  getRecordById
-} from "@/services/dbService";
+  getRecordById,
+} from "@/services/jsonService";
 
 const study = ref([]);
 const users = ref([]);
 const activeTab = ref("sources");
 
+onMounted(() => {
+  console.log("records", RECORDS);
+});
 const databases = {
   sources: {
-    urls: [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/newSources_encrypted_v2.txt",
-    ],
     id: "INTEGER PRIMARY KEY",
-    comapny: "TEXT",
-    type: "TEXT",
-    name: "TEXT",
-    code: "TEXT",
-    special: "TEXT",
-    aquifer: "TEXT",
-    river: "TEXT",
-    village: "TEXT",
-    status: "TEXT",
-    study: "TEXT",
-    tamab: "TEXT",
-    lng: "TEXT",
-    lat: "TEXT",
-    alt: "TEXT",
-    created_at: "TEXT",
-    updated_at: "TEXT",
-  },
-  users: {
-    urls: [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/users_encrypted_base64.txt",
-    ],
-    id: "INTEGER PRIMARY KEY",
-    user_name: "TEXT",
-    first_name: "TEXT",
-    last_name: "TEXT",
-    national_code: "TEXT",
+    d: "TEXT",
+    c: "TEXT",
+    h: "TEXT",
+    m: "TEXT",
+    a: "TEXT",
+    w: "TEXT",
+    r: "TEXT",
+    i: "TEXT",
+    v: "TEXT",
+    j: "TEXT",
+    p: "TEXT",
+    q: "TEXT",
+    f: "TEXT",
+    k: "TEXT",
+    b: "TEXT",
+    g: "TEXT",
+    t: "TEXT",
   },
 };
 
@@ -53,74 +49,66 @@ onMounted(async () => {
   try {
     // 1. ایمپورت دیتابیس
     await importDatabaseFromServer(databases);
-    
+
     // 2. دریافت آخرین تاریخ بروزرسانی برای هر جدول
-    const sourcesLastUpdate = await getLastUpdate("sources");
-    const usersLastUpdate = await getLastUpdate("users");
-    
-    console.log("Last update - Sources:", sourcesLastUpdate);
-    console.log("Last update - Users:", usersLastUpdate);
+    // const sourcesLastUpdate = await getLastUpdate("sources");
+    // const usersLastUpdate = await getLastUpdate("users");
+
+    // console.log("Last update - Sources:", sourcesLastUpdate);
+    // console.log("Last update - Users:", usersLastUpdate);
 
     // 3. استفاده از mock API برای هر جدول
-    const sourcesSync = await mockSyncApi("sources", sourcesLastUpdate);
-    const usersSync = await mockSyncApi("users", usersLastUpdate);
+    // const sourcesSync = await mockSyncApi("sources", sourcesLastUpdate);
+    // const usersSync = await mockSyncApi("users", usersLastUpdate);
 
-    console.log("Sources sync data:", sourcesSync);
-    console.log("Users sync data:", usersSync);
+    // console.log("Sources sync data:", sourcesSync);
+    // console.log("Users sync data:", usersSync);
 
     // 4. پردازش نتایج سینک
-    if (sourcesSync.deletedData && sourcesSync.deletedData.length > 0) {
-      await deleteRecords("sources", sourcesSync.deletedData);
-    }
-    
-    if (sourcesSync.updateData || sourcesSync.createData) {
-      const allSourcesData = [
-        ...(sourcesSync.updateData || []),
-        ...(sourcesSync.createData || [])
-      ];
-      if (allSourcesData.length > 0) {
-        await upsertRecords("sources", allSourcesData);
-      }
-    }
+    // if (sourcesSync.deletedData && sourcesSync.deletedData.length > 0) {
+    //   await deleteRecords("sources", sourcesSync.deletedData);
+    // }
 
-    if (usersSync.deletedData && usersSync.deletedData.length > 0) {
-      await deleteRecords("users", usersSync.deletedData);
-    }
-    
-    if (usersSync.updateData || usersSync.createData) {
-      const allUsersData = [
-        ...(usersSync.updateData || []),
-        ...(usersSync.createData || [])
-      ];
-      if (allUsersData.length > 0) {
-        await upsertRecords("users", allUsersData);
-      }
-    }
+    // if (sourcesSync.updateData || sourcesSync.createData) {
+    //   const allSourcesData = [...(sourcesSync.updateData || []), ...(sourcesSync.createData || [])];
+    //   if (allSourcesData.length > 0) {
+    //     await upsertRecords("sources", allSourcesData);
+    //   }
+    // }
+
+    // if (usersSync.deletedData && usersSync.deletedData.length > 0) {
+    //   await deleteRecords("users", usersSync.deletedData);
+    // }
+
+    // if (usersSync.updateData || usersSync.createData) {
+    //   const allUsersData = [...(usersSync.updateData || []), ...(usersSync.createData || [])];
+    //   if (allUsersData.length > 0) {
+    //     await upsertRecords("users", allUsersData);
+    //   }
+    // }
 
     // 5. بارگذاری داده‌ها برای نمایش
     study.value = await getTableData("sources");
-    users.value = await getTableData("users");
+    // users.value = await getTableData("users");
 
-    console.log("Sources loaded:", study.value.length);
-    console.log("Users loaded:", users.value.length);
+    // console.log("Sources loaded:", study.value.length);
+    // console.log("Users loaded:", users.value.length);
 
     // 6. تست توابع اضافی (اختیاری)
     // const sourceRecord = await getRecordById("sources", 5556);
     // const userRecord = await getRecordById("users", 1001);
     // console.log("Sample source record:", sourceRecord);
     // console.log("Sample user record:", userRecord);
-
   } catch (error) {
     console.error("Error in onMounted:", error);
   }
 });
 </script>
 
-<template>
+<!-- <template>
   <div>
     <h1>مدیریت داده‌ها</h1>
 
-    <!-- تب‌ها برای切换 بین جداول -->
     <div class="tabs">
       <button :class="{ active: activeTab === 'sources' }" @click="activeTab = 'sources'">
         منابع (Sources) - {{ study.length }} رکورد
@@ -130,12 +118,9 @@ onMounted(async () => {
       </button>
     </div>
 
-    <!-- جدول sources -->
     <div v-if="activeTab === 'sources'">
       <h2>جدول منابع</h2>
-      <div v-if="study.length === 0" class="no-data">
-        داده‌ای برای نمایش وجود ندارد
-      </div>
+      <div v-if="study.length === 0" class="no-data">داده‌ای برای نمایش وجود ندارد</div>
       <table v-else>
         <thead>
           <tr>
@@ -184,12 +169,9 @@ onMounted(async () => {
       </table>
     </div>
 
-    <!-- جدول users -->
     <div v-if="activeTab === 'users'">
       <h2>جدول کاربران</h2>
-      <div v-if="users.length === 0" class="no-data">
-        داده‌ای برای نمایش وجود ندارد
-      </div>
+      <div v-if="users.length === 0" class="no-data">داده‌ای برای نمایش وجود ندارد</div>
       <table v-else>
         <thead>
           <tr>
@@ -214,7 +196,7 @@ onMounted(async () => {
       </table>
     </div>
   </div>
-</template>
+</template> -->
 
 <style>
 table {
