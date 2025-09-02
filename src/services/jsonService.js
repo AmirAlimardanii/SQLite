@@ -122,7 +122,7 @@ export async function importDatabaseFromServer(databases) {
       `);
 
       try {
-        const keys = Object.keys(databases.sources); // ستون‌ها طبق تعریف جدول
+        const keys = Object.keys(databases[tableName]); // ستون‌ها طبق تعریف جدول
         // let id = 1;
         for (const item of RECORDS) {
           const stmt = mainDb.prepare(

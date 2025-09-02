@@ -4,6 +4,7 @@
 
 <script setup>
 import { RECORDS } from "../pumps3_min.json";
+import { abbands } from "../ab_bands_min.json";
 import { ref, onMounted } from "vue";
 import {
   importDatabaseFromServer,
@@ -23,7 +24,7 @@ onMounted(() => {
   console.log("records", RECORDS);
 });
 const databases = {
-  sources: {
+  Pump3: {
     id: "INTEGER PRIMARY KEY AUTOINCREMENT",
     d: "INTEGER",
     c: "TEXT",
@@ -43,6 +44,20 @@ const databases = {
     g: "REAL",
     t: "REAL",
   },
+  AbBand: {
+    id: "INTEGER PRIMARY KEY AUTOINCREMENT",
+    d: "INTEGER",
+    m: "INTEGER",
+    c: "TEXT",
+    a: "TEXT",
+    l: "TEXT",
+    w: "TEXT",
+    r: "INTEGER",
+    v: "TEXT",
+    k: "INTEGER",
+    g: "REAL",
+    t: "REAL",
+  }
 };
 
 onMounted(async () => {
@@ -88,7 +103,7 @@ onMounted(async () => {
     // }
 
     // 5. بارگذاری داده‌ها برای نمایش
-    study.value = await getTableData("sources");
+    study.value = await getTableData("AbBand");
     // users.value = await getTableData("users");
 
     // console.log("Sources loaded:", study.value.length);
