@@ -24,11 +24,11 @@ onMounted(() => {
 });
 const databases = {
   sources: {
-    id: "INTEGER PRIMARY KEY",
-    d: "TEXT",
+    id: "INTEGER PRIMARY KEY AUTOINCREMENT",
+    d: "INTEGER",
     c: "TEXT",
-    h: "TEXT",
-    m: "TEXT",
+    h: "INTEGER",
+    m: "INTEGER",
     a: "TEXT",
     w: "TEXT",
     r: "TEXT",
@@ -38,10 +38,10 @@ const databases = {
     p: "TEXT",
     q: "TEXT",
     f: "TEXT",
-    k: "TEXT",
-    b: "TEXT",
-    g: "TEXT",
-    t: "TEXT",
+    k: "INTEGER",
+    b: "INTEGER",
+    g: "REAL",
+    t: "REAL",
   },
 };
 

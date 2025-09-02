@@ -3,7 +3,7 @@ import initSqlJs from "sql.js";
 import CryptoJS from "crypto-js";
 import { RECORDS } from "../../pumps3_min.json";
 
-const ENCRYPTION_KEY = "MySecretKey12345";
+const ENCRYPTION_KEY = "0VE7aQMHfwFEbKRc023DGg98RO9qoECTFxmxtGh4";
 
 // --- Base64 <-> Uint8Array ---
 function uint8ArrayToBase64(uint8Array) {
@@ -64,6 +64,31 @@ async function loadFromIndexedDB() {
 
 let db = null;
 
+
+function downloadEncryptedDb(db) {
+  // دیتابیس رو بگیر
+  const binaryArray = db.export();
+
+  // رمزگذاری با AES
+  const base64 = uint8ArrayToBase64(binaryArray);
+  const encrypted = CryptoJS.AES.encrypt(base64, ENCRYPTION_KEY).toString();
+
+  // ساخت Blob
+  const blob = new Blob([encrypted], { type: "text/plain" });
+
+  // ساخت لینک دانلود
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "database.enc"; // پسوند دلخواه
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  console.log("✅ Database encrypted and downloaded");
+}
+
 // --- دریافت و لود دیتابیس ---
 export async function importDatabaseFromServer(databases) {
   if (Capacitor.getPlatform() === "web") {
@@ -96,25 +121,9 @@ export async function importDatabaseFromServer(databases) {
         )
       `);
 
-      // پردازش هر URL برای این جدول
-      //   for (let i = 0; i < urls.length; i++) {
       try {
-        //   const response = await fetch(urls[i]);
-        //   if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
-        //   const encryptedText = await response.text();
-
-        //   const decrypted = decryptData(encryptedText);
-        //   const tempDb = new SQL.Database(decrypted);
-
-        // خواندن داده‌ها از جدول متناظر
-        //   const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
-
-        //   const sourceColumns = rows[0].columns;
-        //   const values = rows[0].values;
-        console.log(databases);
-
-        const keys = Object.keys(databases[tableName]); // ستون‌ها طبق تعریف جدول
-        let id = 1;
+        const keys = Object.keys(databases.sources); // ستون‌ها طبق تعریف جدول
+        // let id = 1;
         for (const item of RECORDS) {
           const stmt = mainDb.prepare(
             `INSERT OR REPLACE INTO ${tableName} (${keys.join(",")}) VALUES (${keys
@@ -123,29 +132,22 @@ export async function importDatabaseFromServer(databases) {
           );
 
           const rowValues = keys.map((key) => {
-            if (key === "id") {
-              return id; // یا item.id اگر وجود داشت
-            }
+            // if (key === "id") {
+            //   return id; // یا item.id اگر وجود داشت
+            // }
             return item[key] ?? null; // اگر ستون وجود نداشت، null بگذار
           });
 
           stmt.run(rowValues);
           stmt.free();
-          id++;
+          // id++;
         }
-
-        //   for (const row of values) {
-        //     stmt.run(row);
-        //   }
-        //   stmt.free();
-
-        //   tempDb.close();
-        //   console.log(`✅ Table ${tableName} loaded from URL ${i + 1}/${urls.length}`);
       } catch (error) {
-        //   console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
         console.log(error);
       }
-      //   }
+
+      // دانلود دیتابیس رمزگذاری شده
+      downloadEncryptedDb(mainDb);
     }
 
     // ذخیره دیتابیس نهایی
