@@ -63,84 +63,116 @@ async function loadFromIndexedDB() {
 
 let db = null;
 
+
+
+async function fetchDatabaseInChunks(url) {
+  console.log("⏳ Start fetching:", url);
+  const response = await fetch(url);
+
+  if (!response.ok) throw new Error(`❌ Failed to fetch DB from ${url}`);
+  if (!response.body) {
+    console.warn("⚠️ Streaming not supported, reading full response");
+    return await response.text();
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let receivedLength = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    receivedLength += value.length;
+    console.log(`⏳ Received ${receivedLength} bytes so far...`);
+  }
+
+  const combined = new Uint8Array(receivedLength);
+  let position = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, position);
+    position += chunk.length;
+  }
+
+  return new TextDecoder().decode(combined);
+}
+
 // --- دریافت و لود دیتابیس ---
 export async function importDatabaseFromServer(databases) {
-  if (Capacitor.getPlatform() === "web") {
-    const SQL = await initSqlJs({
-      locateFile: (file) => `/sql-wasm.wasm`,
-    });
+  if (Capacitor.getPlatform() !== "web") {
+    throw new Error("❌ Only web platform is supported for chunked fetch");
+  }
 
-    const savedDb = await loadFromIndexedDB();
-    if (savedDb) {
-      db = new SQL.Database(savedDb);
-      console.log("✅ DB loaded from IndexedDB");
-      return;
-    }
+  const SQL = await initSqlJs({
+    locateFile: (file) => `/sql-wasm.wasm`,
+  });
 
-    // دیتابیس نهایی
-    const mainDb = new SQL.Database();
+  // تلاش برای لود دیتابیس از IndexedDB
+  const savedDb = await loadFromIndexedDB();
+  if (savedDb) {
+    db = new SQL.Database(savedDb);
+    console.log("✅ DB loaded from IndexedDB");
+    return;
+  }
 
-    // برای هر جدول در databases
-    for (const [tableName, tableConfig] of Object.entries(databases)) {
-      const { urls, ...columns } = tableConfig;
+  const mainDb = new SQL.Database();
 
-      // ایجاد جدول اگر وجود ندارد
-      const columnDefinitions = Object.entries(columns)
-        .map(([colName, colType]) => `"${colName}" ${colType}`)
-        .join(", ");
+  // پردازش هر جدول
+  for (const [tableName, tableConfig] of Object.entries(databases)) {
+    const { urls, ...columns } = tableConfig;
 
-      mainDb.exec(`
-        CREATE TABLE IF NOT EXISTS "${tableName}" (
-          ${columnDefinitions}
-        )
-      `);
+    // ایجاد جدول در صورت عدم وجود
+    const columnDefinitions = Object.entries(columns)
+      .map(([colName, colType]) => `"${colName}" ${colType}`)
+      .join(", ");
+    mainDb.exec(`
+      CREATE TABLE IF NOT EXISTS "${tableName}" (
+        ${columnDefinitions}
+      )
+    `);
 
-      // پردازش هر URL برای این جدول
-      for (let i = 0; i < urls.length; i++) {
-        try {
-          const response = await fetch(urls[i]);
-          if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
-          const encryptedText = await response.text();
+    // دریافت داده‌ها از هر URL
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        const encryptedText = await fetchDatabaseInChunks(urls[i]);
+        const decrypted = decryptData(encryptedText);
+        const tempDb = new SQL.Database(decrypted);
 
-          const decrypted = decryptData(encryptedText);
-          const tempDb = new SQL.Database(decrypted);
+        // خواندن داده‌ها
+        const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+        if (rows.length > 0) {
+          const sourceColumns = rows[0].columns;
+          const values = rows[0].values;
 
-          // خواندن داده‌ها از جدول متناظر
-          const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+          // درج داده‌ها به صورت OR REPLACE
+          const stmt = mainDb.prepare(
+            `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
+              .map((c) => `"${c}"`)
+              .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
+          );
 
-          if (rows.length > 0) {
-            const sourceColumns = rows[0].columns;
-            const values = rows[0].values;
-
-            // درج داده‌ها
-            const stmt = mainDb.prepare(
-              `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
-                .map((c) => `"${c}"`)
-                .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
-            );
-
-            for (const row of values) {
-              stmt.run(row);
-            }
-            stmt.free();
+          for (const row of values) {
+            stmt.run(row);
           }
-
-          tempDb.close();
-          console.log(`✅ Table ${tableName} loaded from URL ${i + 1}/${urls.length}`);
-        } catch (error) {
-          console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
+          stmt.free();
         }
+
+        tempDb.close();
+        console.log(`✅ Table "${tableName}" loaded from URL ${i + 1}/${urls.length}`);
+      } catch (err) {
+        console.error(`❌ Error loading table "${tableName}" from URL ${urls[i]}:`, err);
       }
     }
-
-    // ذخیره دیتابیس نهایی
-    const mergedBinary = mainDb.export();
-    await saveToIndexedDB(mergedBinary);
-
-    db = mainDb;
-    console.log("✅ All tables merged & saved to IndexedDB");
   }
+
+  // ذخیره دیتابیس نهایی در IndexedDB
+  const mergedBinary = mainDb.export();
+  await saveToIndexedDB(mergedBinary);
+
+  db = mainDb;
+  console.log("✅ All tables merged & saved to IndexedDB");
 }
+
 
 // --- دریافت داده‌های جدول ---
 export async function getTableData(tableName, limit = 100000) {
