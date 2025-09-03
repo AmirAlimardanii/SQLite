@@ -45,39 +45,39 @@ function decryptData(encryptedText) {
 }
 
 // --- ذخیره در IndexedDB ---
-async function saveToIndexedDB(name, key, data) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DATABASE_NAME, 1);
-    request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore(name);
-    };
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      const tx = db.transaction(name, "readwrite");
-      tx.objectStore(name).put(data, key);
-      tx.oncomplete = resolve;
-      tx.onerror = reject;
-    };
-  });
-}
+// async function saveToIndexedDB(name, key, data) {
+//   return new Promise((resolve, reject) => {
+//     const request = indexedDB.open(DATABASE_NAME, 1);
+//     request.onupgradeneeded = (e) => {
+//       e.target.result.createObjectStore(name);
+//     };
+//     request.onsuccess = (e) => {
+//       const db = e.target.result;
+//       const tx = db.transaction(name, "readwrite");
+//       tx.objectStore(name).put(data, key);
+//       tx.oncomplete = resolve;
+//       tx.onerror = reject;
+//     };
+//   });
+// }
 
 // --- لود از IndexedDB ---
-async function loadFromIndexedDB(name, key) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DATABASE_NAME, 1);
-    request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore(name);
-    };
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      const tx = db.transaction(name, "readonly");
-      const getReq = tx.objectStore(name).get(key);
-      getReq.onsuccess = () => resolve(getReq.result || null);
-      getReq.onerror = reject;
-    };
-    request.onerror = reject;
-  });
-}
+// async function loadFromIndexedDB(name, key) {
+//   return new Promise((resolve, reject) => {
+//     const request = indexedDB.open(DATABASE_NAME, 1);
+//     request.onupgradeneeded = (e) => {
+//       e.target.result.createObjectStore(name);
+//     };
+//     request.onsuccess = (e) => {
+//       const db = e.target.result;
+//       const tx = db.transaction(name, "readonly");
+//       const getReq = tx.objectStore(name).get(key);
+//       getReq.onsuccess = () => resolve(getReq.result || null);
+//       getReq.onerror = reject;
+//     };
+//     request.onerror = reject;
+//   });
+// }
 
 let db = null;
 
@@ -86,9 +86,6 @@ let db = null;
 export async function loadDatabaseFromServer(databases) {
   if (Capacitor.getPlatform() === "web") {
     for (const [tableName, { urls }] of Object.entries(databases)) {
-
-
-      
       let keysList = await getKeysInIndexedDB(NAME);
       let allowKeys = urls.map(({ file }) => file);
       let mostRemoveKeys = keysList.filter((key) => !allowKeys.includes(key));
@@ -413,48 +410,85 @@ export async function updateData(tableName, data) {
   return upsertRecords(tableName, data);
 }
 
-export async function getKeysInIndexedDB(NAME) {
+// export async function getKeysInIndexedDB(NAME) {
+//   return new Promise((resolve, reject) => {
+//     const request = indexedDB.open("simmab", 1);
+
+//     request.onupgradeneeded = (e) => {
+//       const db = e.target.result;
+//       if (!db.objectStoreNames.contains(NAME)) {
+//         db.createObjectStore(NAME);
+//       }
+//     };
+
+//     request.onsuccess = (e) => {
+//       const db = e.target.result;
+
+//       if (!db.objectStoreNames.contains(NAME)) {
+//         console.error(`❌ ObjectStore "${NAME}" پیدا نشد`);
+//         resolve([]);
+//         return;
+//       }
+
+//       const tx = db.transaction(NAME, "readonly");
+//       const store = tx.objectStore(NAME);
+
+//       const existingKeysReq = store.getAllKeys();
+//       existingKeysReq.onsuccess = () => {
+//         const existingKeys = existingKeysReq.result;
+//         // const result = keysToCheck.map((key) => ({
+//         //   key,
+//         //   exists: existingKeys.includes(key),
+//         // }));
+//         resolve(existingKeys);
+//       };
+//       existingKeysReq.onerror = reject;
+//     };
+
+//     request.onerror = reject;
+//   });
+// }
+
+// async function deleteKeyFromIndexedDB(storeName, key) {
+//   return new Promise((resolve, reject) => {
+//     const request = indexedDB.open("simmab", 1);
+
+//     request.onupgradeneeded = (e) => {
+//       const db = e.target.result;
+//       if (!db.objectStoreNames.contains(storeName)) {
+//         db.createObjectStore(storeName);
+//       }
+//     };
+
+//     request.onsuccess = (e) => {
+//       const db = e.target.result;
+
+//       if (!db.objectStoreNames.contains(storeName)) {
+//         console.error(`❌ ObjectStore "${storeName}" پیدا نشد`);
+//         resolve(false);
+//         return;
+//       }
+
+//       const tx = db.transaction(storeName, "readwrite");
+//       const store = tx.objectStore(storeName);
+//       const deleteReq = store.delete(key);
+
+//       deleteReq.onsuccess = () => {
+//         resolve(true);
+//       };
+//       deleteReq.onerror = (err) => {
+//         console.error("❌ خطا در حذف:", err);
+//         reject(err);
+//       };
+//     };
+
+//     request.onerror = reject;
+//   });
+// }
+
+function manageIndexedDB(storeName, mode, callback) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("simmab", 1);
-
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(NAME)) {
-        db.createObjectStore(NAME);
-      }
-    };
-
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-
-      if (!db.objectStoreNames.contains(NAME)) {
-        console.error(`❌ ObjectStore "${NAME}" پیدا نشد`);
-        resolve([]);
-        return;
-      }
-
-      const tx = db.transaction(NAME, "readonly");
-      const store = tx.objectStore(NAME);
-
-      const existingKeysReq = store.getAllKeys();
-      existingKeysReq.onsuccess = () => {
-        const existingKeys = existingKeysReq.result;
-        // const result = keysToCheck.map((key) => ({
-        //   key,
-        //   exists: existingKeys.includes(key),
-        // }));
-        resolve(existingKeys);
-      };
-      existingKeysReq.onerror = reject;
-    };
-
-    request.onerror = reject;
-  });
-}
-
-async function deleteKeyFromIndexedDB(storeName, key) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("simmab", 1);
+    const request = indexedDB.open(DATABASE_NAME, 1);
 
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
@@ -465,26 +499,48 @@ async function deleteKeyFromIndexedDB(storeName, key) {
 
     request.onsuccess = (e) => {
       const db = e.target.result;
-
       if (!db.objectStoreNames.contains(storeName)) {
         console.error(`❌ ObjectStore "${storeName}" پیدا نشد`);
-        resolve(false);
+        resolve(null);
         return;
       }
-
-      const tx = db.transaction(storeName, "readwrite");
+      const tx = db.transaction(storeName, mode);
       const store = tx.objectStore(storeName);
-      const deleteReq = store.delete(key);
-
-      deleteReq.onsuccess = () => {
-        resolve(true);
-      };
-      deleteReq.onerror = (err) => {
-        console.error("❌ خطا در حذف:", err);
-        reject(err);
-      };
+      callback(store, resolve, reject);
     };
 
     request.onerror = reject;
+  });
+}
+
+async function saveToIndexedDB(name, key, data) {
+  return manageIndexedDB(name, "readwrite", (store, resolve, reject) => {
+    const req = store.put(data, key);
+    req.onsuccess = () => resolve(true);
+    req.onerror = reject;
+  });
+}
+
+async function loadFromIndexedDB(name, key) {
+  return manageIndexedDB(name, "readonly", (store, resolve, reject) => {
+    const req = store.get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = reject;
+  });
+}
+
+export async function getKeysInIndexedDB(name) {
+  return manageIndexedDB(name, "readonly", (store, resolve, reject) => {
+    const req = store.getAllKeys();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = reject;
+  });
+}
+
+async function deleteKeyFromIndexedDB(name, key) {
+  return manageIndexedDB(name, "readwrite", (store, resolve, reject) => {
+    const req = store.delete(key);
+    req.onsuccess = () => resolve(true);
+    req.onerror = reject;
   });
 }
