@@ -2,6 +2,8 @@ import { Capacitor } from "@capacitor/core";
 import initSqlJs from "sql.js";
 import CryptoJS from "crypto-js";
 import { RECORDS } from "../../pumps3_min.json";
+import { Wells3 } from "../../wells3_min.json";
+
 
 const ENCRYPTION_KEY = "0VE7aQMHfwFEbKRc023DGg98RO9qoECTFxmxtGh4";
 
@@ -124,7 +126,7 @@ export async function importDatabaseFromServer(databases) {
       try {
         const keys = Object.keys(databases[tableName]); // ستون‌ها طبق تعریف جدول
         // let id = 1;
-        for (const item of RECORDS) {
+        for (const item of Wells3) {
           const stmt = mainDb.prepare(
             `INSERT OR REPLACE INTO ${tableName} (${keys.join(",")}) VALUES (${keys
               .map(() => "?")
