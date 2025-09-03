@@ -7,7 +7,7 @@ import { abbands } from "../../ab_bands_min.json";
 
 
 const ENCRYPTION_KEY = "0VE7aQMHfwFEbKRc023DGg98RO9qoECTFxmxtGh4";
-const study_code = "4745";
+const study_code = "4717";
 
 // --- Base64 <-> Uint8Array ---
 function uint8ArrayToBase64(uint8Array) {
@@ -69,28 +69,43 @@ async function loadFromIndexedDB() {
 let db = null;
 
 
+// function downloadEncryptedDb(db) {
+//   // دیتابیس رو بگیر
+//   const binaryArray = db.export();
+
+//   // رمزگذاری با AES
+//   const base64 = uint8ArrayToBase64(binaryArray);
+//   const encrypted = CryptoJS.AES.encrypt(base64, ENCRYPTION_KEY).toString();
+
+//   // ساخت Blob
+//   const blob = new Blob([encrypted], { type: "text/plain" });
+
+//   // ساخت لینک دانلود
+//   const url = URL.createObjectURL(blob);
+//   const a = document.createElement("a");
+//   a.href = url;
+//   a.download = "wells3_" + study_code + ".txt"; // پسوند دلخواه
+//   document.body.appendChild(a);
+//   a.click();
+//   document.body.removeChild(a);
+//   URL.revokeObjectURL(url);
+
+//   console.log("✅ Database encrypted and downloaded");
+// }
+
 function downloadEncryptedDb(db) {
-  // دیتابیس رو بگیر
-  const binaryArray = db.export();
+  const binaryArray = db.export();                // SQLite → Uint8Array
+  const base64 = uint8ArrayToBase64(binaryArray); // Uint8Array → Base64
 
-  // رمزگذاری با AES
-  const base64 = uint8ArrayToBase64(binaryArray);
   const encrypted = CryptoJS.AES.encrypt(base64, ENCRYPTION_KEY).toString();
-
-  // ساخت Blob
   const blob = new Blob([encrypted], { type: "text/plain" });
 
-  // ساخت لینک دانلود
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "wells3_" + study_code + ".txt"; // پسوند دلخواه
-  document.body.appendChild(a);
+  a.download = "wells3_" + study_code + ".txt"; 
   a.click();
-  document.body.removeChild(a);
   URL.revokeObjectURL(url);
-
-  console.log("✅ Database encrypted and downloaded");
 }
 
 // --- دریافت و لود دیتابیس ---
