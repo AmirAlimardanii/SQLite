@@ -17,6 +17,8 @@
 
 <script setup>
 import { RECORDS } from "../pumps3_min.json";
+import { abbands } from "../ab_bands_min.json";
+import { Wells3 } from "../wells3_min.json";
 import { Pump3 } from "../CensusConst";
 import { ref, onMounted } from "vue";
 import {
@@ -34,29 +36,72 @@ const users = ref([]);
 const activeTab = ref("sources");
 
 onMounted(() => {
-  console.log("records", RECORDS);
+  console.log("records", Wells3);
 });
 const databases = {
-  sources: {
-    id: "INTEGER PRIMARY KEY",
-    d: "TEXT",
+  // Pump3: {
+  //   id: "INTEGER PRIMARY KEY AUTOINCREMENT",
+  //   d: "INTEGER",
+  //   c: "TEXT",
+  //   h: "INTEGER",
+  //   m: "INTEGER",
+  //   a: "TEXT",
+  //   w: "TEXT",
+  //   r: "TEXT",
+  //   i: "TEXT",
+  //   v: "TEXT",
+  //   j: "TEXT",
+  //   p: "TEXT",
+  //   q: "TEXT",
+  //   f: "TEXT",
+  //   k: "INTEGER",
+  //   b: "INTEGER",
+  //   g: "REAL",
+  //   t: "REAL",
+  // },
+  // AbBand: {
+  //   id: "INTEGER PRIMARY KEY AUTOINCREMENT",
+  //   d: "INTEGER",
+  //   m: "INTEGER",
+  //   c: "TEXT",
+  //   a: "TEXT",
+  //   l: "TEXT",
+  //   w: "TEXT",
+  //   r: "INTEGER",
+  //   v: "TEXT",
+  //   k: "INTEGER",
+  //   g: "REAL",
+  //   t: "REAL",
+  // }
+  wells3: {
+    id: "INTEGER PRIMARY KEY AUTOINCREMENT",
+    d: "INTEGER",
     c: "TEXT",
+    e: "INTEGER",
     h: "TEXT",
-    m: "TEXT",
+    m: "INTEGER",
     a: "TEXT",
-    w: "TEXT",
-    r: "TEXT",
-    i: "TEXT",
-    v: "TEXT",
-    j: "TEXT",
-    p: "TEXT",
+    n: "TEXT",
     q: "TEXT",
-    f: "TEXT",
-    k: "TEXT",
+    p: "INTEGER",
+    i: "TEXT",
+    f: "INTEGER",
+    k: "INTEGER",
+    s: "INTEGER",
+    j: "INTEGER",
+    r: "INTEGER",
+    o: "INTEGER",
+    u: "TEXT",
+    g: "REAL",
+    t: "REAL",
     b: "TEXT",
-    g: "TEXT",
-    t: "TEXT",
-  },
+    w: "TEXT",
+    v: "TEXT",
+    l: "TEXT",
+    ms: "TEXT",
+  }
+  
+
 };
 
 
@@ -103,7 +148,7 @@ onMounted(async () => {
     // }
 
     // 5. بارگذاری داده‌ها برای نمایش
-    study.value = await getTableData("sources");
+    study.value = await getTableData("wells3");
     // users.value = await getTableData("users");
 
     // console.log("Sources loaded:", study.value.length);
