@@ -3,22 +3,25 @@
     <thead>
       <tr>
         <th>id</th>
-        <th v-for="title in Pump3">{{ title }}</th>
+        <th v-for="(index, title) in Pump3" :key="index">{{ title }}</th>
       </tr>
     </thead>
     <tbody>
       <tr v-for="item in study" :key="item.id">
         <td>{{ item.id }}</td>
-        <td v-for="key in Object.keys(Pump3)">{{ item[key] }}</td>
+        <td v-for="key in Object.keys(Pump3)" :key="key">{{ item[key] }}</td>
       </tr>
     </tbody>
   </table>
+
+  <hr />
 </template>
 
 <script setup>
 import { RECORDS } from "../pumps3_min.json";
 import { Pump3 } from "../CensusConst";
 import { ref, onMounted } from "vue";
+import { encryptJSON, downloadFile } from "./services/encrypt";
 import {
   importDatabaseFromServer,
   getTableData,
@@ -58,7 +61,6 @@ const databases = {
     t: "TEXT",
   },
 };
-
 
 onMounted(async () => {
   try {
@@ -118,6 +120,11 @@ onMounted(async () => {
     console.error("Error in onMounted:", error);
   }
 });
+// 1. رمزگذاری
+const encryptedData = encryptJSON(RECORDS);
+
+// 2. دانلود فایل رمزگذاری شده
+downloadFile(encryptedData, "encrypted.json");
 </script>
 
 <!-- <template>
