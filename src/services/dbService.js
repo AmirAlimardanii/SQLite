@@ -75,12 +75,49 @@ async function loadFromIndexedDB(name, key) {
       getReq.onsuccess = () => resolve(getReq.result || null);
       getReq.onerror = reject;
     };
+    request.onerror = reject;
   });
 }
 
 let db = null;
 
 // --- دریافت و لود دیتابیس ---
+
+export async function loadDatabaseFromServer(databases) {
+  if (Capacitor.getPlatform() === "web") {
+    for (const [tableName, { urls }] of Object.entries(databases)) {
+
+
+      
+      let keysList = await getKeysInIndexedDB(NAME);
+      let allowKeys = urls.map(({ file }) => file);
+      let mostRemoveKeys = keysList.filter((key) => !allowKeys.includes(key));
+
+      if (mostRemoveKeys.length > 0) {
+        await Promise.all(mostRemoveKeys.map((key) => deleteKeyFromIndexedDB(NAME, key)));
+      }
+
+      // پردازش هر URL برای این جدول
+      for (let i = 0; i < urls.length; i++) {
+        const savedDb = await loadFromIndexedDB(NAME, urls[i].file);
+        if (!savedDb || savedDb.length < 5) {
+          try {
+            const response = await fetch(urls[i].url);
+            if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
+            console.log("resp ", response);
+
+            const encryptedText = await response.text();
+            console.log("encryptedText ", encryptedText);
+
+            await saveToIndexedDB(NAME, urls[i].file, encryptedText);
+          } catch (error) {
+            console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
+          }
+        }
+      }
+    }
+  }
+}
 export async function importDatabaseFromServer(databases) {
   if (Capacitor.getPlatform() === "web") {
     const SQL = await initSqlJs({
@@ -167,7 +204,6 @@ export async function importDatabaseFromServer(databases) {
 // --- دریافت آخرین تاریخ بروزرسانی ---
 export async function getLastUpdate(tableName) {
   // if (!db) throw new Error("❌ Database not loaded yet");
-
   // try {
   //   if (Capacitor.getPlatform() === "web") {
   //     const res = db.exec(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
@@ -375,4 +411,80 @@ export async function deletedData(tableName, ids) {
 
 export async function updateData(tableName, data) {
   return upsertRecords(tableName, data);
+}
+
+export async function getKeysInIndexedDB(NAME) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("simmab", 1);
+
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(NAME)) {
+        db.createObjectStore(NAME);
+      }
+    };
+
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+
+      if (!db.objectStoreNames.contains(NAME)) {
+        console.error(`❌ ObjectStore "${NAME}" پیدا نشد`);
+        resolve([]);
+        return;
+      }
+
+      const tx = db.transaction(NAME, "readonly");
+      const store = tx.objectStore(NAME);
+
+      const existingKeysReq = store.getAllKeys();
+      existingKeysReq.onsuccess = () => {
+        const existingKeys = existingKeysReq.result;
+        // const result = keysToCheck.map((key) => ({
+        //   key,
+        //   exists: existingKeys.includes(key),
+        // }));
+        resolve(existingKeys);
+      };
+      existingKeysReq.onerror = reject;
+    };
+
+    request.onerror = reject;
+  });
+}
+
+async function deleteKeyFromIndexedDB(storeName, key) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("simmab", 1);
+
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(storeName)) {
+        db.createObjectStore(storeName);
+      }
+    };
+
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+
+      if (!db.objectStoreNames.contains(storeName)) {
+        console.error(`❌ ObjectStore "${storeName}" پیدا نشد`);
+        resolve(false);
+        return;
+      }
+
+      const tx = db.transaction(storeName, "readwrite");
+      const store = tx.objectStore(storeName);
+      const deleteReq = store.delete(key);
+
+      deleteReq.onsuccess = () => {
+        resolve(true);
+      };
+      deleteReq.onerror = (err) => {
+        console.error("❌ خطا در حذف:", err);
+        reject(err);
+      };
+    };
+
+    request.onerror = reject;
+  });
 }

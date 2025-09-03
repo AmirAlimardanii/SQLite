@@ -66,19 +66,16 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import {
-  importDatabaseFromServer,
   getTableData,
   getLastUpdate,
-  mockSyncApi,
-  deleteRecords,
-  upsertRecords,
-  getRecordById,
+  loadDatabaseFromServer,
+  getKeysInIndexedDB,
 } from "@/services/dbService";
 
 const study = ref([]);
 const users = ref([]);
 const activeTab = ref("Wells3");
-const myStudy = ["4717", "6002"];
+const myStudy = ["6002", "6005", "6001"];
 const wells3Urls = myStudy.map((id) => ({
   url: `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${id}.txt`,
   file: `wells3_${id}`,
@@ -127,7 +124,7 @@ const databases = {
 onMounted(async () => {
   try {
     // 1. ایمپورت دیتابیس
-    await importDatabaseFromServer(databases);
+    await loadDatabaseFromServer(databases);
 
     // 2. دریافت آخرین تاریخ بروزرسانی برای هر جدول
     const sourcesLastUpdate = await getLastUpdate("Wells3");
@@ -161,7 +158,7 @@ onMounted(async () => {
     // }
 
     // 5. بارگذاری داده‌ها برای نمایش
-    study.value = await getTableData("wells3");
+    // study.value = await getTableData("wells3");
     // users.value = await getTableData("users");
 
     // console.log("Sources loaded:", study.value.length);
