@@ -22,7 +22,7 @@ const databases = {
     //     // https://github.com/AmirAlimardanii/SQLite/blob/th-db/src/wells/wells3_1708.txt
     // ),
     urls: [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_4717.txt",
+      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/wells3_4717.txt",
       // "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_6002.txt",
     ],
 
