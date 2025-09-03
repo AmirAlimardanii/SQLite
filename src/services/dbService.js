@@ -157,27 +157,22 @@ export async function importDatabaseFromServer(databases) {
 }
 
 // --- دریافت داده‌های جدول ---
+// --- دریافت آخرین تاریخ بروزرسانی ---
 export async function getLastUpdate(tableName) {
-  if (!db) throw new Error("❌ Database not loaded yet");
+  // if (!db) throw new Error("❌ Database not loaded yet");
 
-  let orderBy = "updated_at";
-  if (Capacitor.getPlatform() === "web") {
-    const tableInfo = db.exec(`PRAGMA table_info("${tableName}")`);
-    const columns = tableInfo[0].values.map((row) => row[1]);
-    if (!columns.includes("updated_at")) {
-      orderBy = "id";
-    }
-    const res = db.exec(`SELECT MAX(${orderBy}) AS last_update FROM "${tableName}"`);
-    return res.length > 0 ? res[0].values[0][0] : null;
-  } else {
-    const tableInfo = await db.query(`PRAGMA table_info("${tableName}")`);
-    const columns = tableInfo.values.map((row) => row[1]);
-    if (!columns.includes("updated_at")) {
-      orderBy = "id";
-    }
-    const res = await db.query(`SELECT MAX(${orderBy}) AS last_update FROM "${tableName}"`);
-    return res.values.length > 0 ? res.values[0].last_update : null;
-  }
+  // try {
+  //   if (Capacitor.getPlatform() === "web") {
+  //     const res = db.exec(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
+  //     return res.length > 0 && res[0].values.length > 0 ? res[0].values[0][0] : null;
+  //   } else {
+  //     const res = await db.query(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
+  //     return res.values.length > 0 ? res.values[0].last_update : null;
+  //   }
+  // } catch (error) {
+  //   console.error(`❌ Error getting last update for ${tableName}:`, error);
+  //   return null;
+  // }
 }
 
 export async function getTableData(tableName, limit = 100000) {
