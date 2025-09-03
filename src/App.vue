@@ -17,7 +17,7 @@ const activeTab = ref("sources");
 const databases = {
   sources: {
     urls: [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/seperate-file/newSources_encrypted_v2.txt",
+      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/feat/th-db/newSources_encrypted_v2.txt",
     ],
     id: "INTEGER PRIMARY KEY",
     comapny: "TEXT",
