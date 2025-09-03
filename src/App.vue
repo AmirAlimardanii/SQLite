@@ -13,29 +13,40 @@ import {
 const study = ref([]);
 const users = ref([]);
 const activeTab = ref("sources");
-
+const myStudy = ["4717", "6002"];
 const databases = {
-  sources: {
-    urls: [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/newSources_encrypted_v3.txt",
-    ],
+  wells3: {
+    urls: myStudy.map(
+      (m) =>
+        `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${m}.txt`
+        // https://github.com/AmirAlimardanii/SQLite/blob/th-db/src/wells/wells3_1708.txt
+    ),
+
     id: "INTEGER PRIMARY KEY",
-    comapny: "TEXT",
-    type: "TEXT",
-    name: "TEXT",
-    code: "TEXT",
-    special: "TEXT",
-    aquifer: "TEXT",
-    river: "TEXT",
-    village: "TEXT",
-    status: "TEXT",
-    study: "TEXT",
-    tamab: "TEXT",
-    lng: "TEXT",
-    lat: "TEXT",
-    alt: "TEXT",
-    created_at: "TEXT",
-    updated_at: "TEXT",
+    d: "INTEGER",
+    c: "TEXT",
+    e: "INTEGER",
+    h: "TEXT",
+    m: "INTEGER",
+    a: "TEXT",
+    n: "TEXT",
+    q: "TEXT",
+    p: "INTEGER",
+    i: "TEXT",
+    f: "INTEGER",
+    k: "INTEGER",
+    s: "INTEGER",
+    j: "INTEGER",
+    r: "INTEGER",
+    o: "INTEGER",
+    u: "TEXT",
+    g: "REAL",
+    t: "REAL",
+    b: "TEXT",
+    w: "TEXT",
+    v: "TEXT",
+    l: "TEXT",
+    ms: "TEXT",
   },
   users: {
     urls: [

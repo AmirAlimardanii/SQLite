@@ -2,7 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import initSqlJs from "sql.js";
 import CryptoJS from "crypto-js";
 
-const ENCRYPTION_KEY = "MySecretKey12345";
+const ENCRYPTION_KEY = "0VE7aQMHfwFEbKRc023DGg98RO9qoECTFxmxtGh4";
 
 // --- Base64 <-> Uint8Array ---
 function uint8ArrayToBase64(uint8Array) {
