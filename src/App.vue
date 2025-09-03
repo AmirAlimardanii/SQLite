@@ -1,11 +1,25 @@
 <template>
-  <div>{{ study }}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>id</th>
+        <th v-for="title in Pump3">{{ title }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="item in study" :key="item.id">
+        <td>{{ item.id }}</td>
+        <td v-for="key in Object.keys(Pump3)">{{ item[key] }}</td>
+      </tr>
+    </tbody>
+  </table>
 </template>
 
 <script setup>
 import { RECORDS } from "../pumps3_min.json";
 import { abbands } from "../ab_bands_min.json";
 import { Wells3 } from "../wells3_min.json";
+import { Pump3 } from "../CensusConst";
 import { ref, onMounted } from "vue";
 import {
   importDatabaseFromServer,
