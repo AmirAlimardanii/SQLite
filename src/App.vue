@@ -15,12 +15,16 @@ const users = ref([]);
 const activeTab = ref("sources");
 const myStudy = ["4717", "6002"];
 const databases = {
-  wells3: {
-    urls: myStudy.map(
-      (m) =>
-        `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${m}.txt`
-        // https://github.com/AmirAlimardanii/SQLite/blob/th-db/src/wells/wells3_1708.txt
-    ),
+  Wells3: {
+    // urls: myStudy.map(
+    //   (m) =>
+    //     `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${m}.txt`
+    //     // https://github.com/AmirAlimardanii/SQLite/blob/th-db/src/wells/wells3_1708.txt
+    // ),
+    urls: [
+      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_4717.txt",
+      // "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_6002.txt",
+    ],
 
     id: "INTEGER PRIMARY KEY",
     d: "INTEGER",
@@ -48,16 +52,16 @@ const databases = {
     l: "TEXT",
     ms: "TEXT",
   },
-  users: {
-    urls: [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/users_encrypted_base64.txt",
-    ],
-    id: "INTEGER PRIMARY KEY",
-    user_name: "TEXT",
-    first_name: "TEXT",
-    last_name: "TEXT",
-    national_code: "TEXT",
-  },
+  // users: {
+  //   urls: [
+  //     "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/users_encrypted_base64.txt",
+  //   ],
+  //   id: "INTEGER PRIMARY KEY",
+  //   user_name: "TEXT",
+  //   first_name: "TEXT",
+  //   last_name: "TEXT",
+  //   national_code: "TEXT",
+  // },
 };
 
 onMounted(async () => {

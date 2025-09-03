@@ -21,10 +21,24 @@ function base64ToUint8Array(base64) {
 }
 
 // --- رمزگشایی ---
-function decryptData(encryptedBase64) {
-  const bytes = CryptoJS.AES.decrypt(encryptedBase64, ENCRYPTION_KEY);
-  const originalBase64 = bytes.toString(CryptoJS.enc.Utf8);
-  return base64ToUint8Array(originalBase64);
+function decryptData(encryptedText) {
+  try {
+    // AES decrypt → WordArray
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+
+    // WordArray → UTF8 (این مرحله باید Base64 بده چون اون‌طوری ذخیره کرده بودیم)
+    const base64 = decrypted.toString(CryptoJS.enc.Utf8);
+
+    if (!base64) {
+      throw new Error("❌ Decryption failed: empty base64 output");
+    }
+
+    // Base64 → Uint8Array → SQLite binary
+    return base64ToUint8Array(base64);
+  } catch (error) {
+    console.error("❌ Error while decrypting data:", error);
+    throw error;
+  }
 }
 
 // --- ذخیره در IndexedDB ---
