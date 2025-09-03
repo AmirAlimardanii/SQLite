@@ -7,7 +7,7 @@ import {
   mockSyncApi,
   deleteRecords,
   upsertRecords,
-  getRecordById
+  getRecordById,
 } from "@/services/dbService";
 
 const study = ref([]);
@@ -17,7 +17,7 @@ const activeTab = ref("sources");
 const databases = {
   sources: {
     urls: [
-      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/newSources_encrypted_v2.txt",
+      "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/newSources_encrypted_v3.txt",
     ],
     id: "INTEGER PRIMARY KEY",
     comapny: "TEXT",
@@ -53,11 +53,11 @@ onMounted(async () => {
   try {
     // 1. ایمپورت دیتابیس
     await importDatabaseFromServer(databases);
-    
+
     // 2. دریافت آخرین تاریخ بروزرسانی برای هر جدول
     const sourcesLastUpdate = await getLastUpdate("sources");
     const usersLastUpdate = await getLastUpdate("users");
-    
+
     console.log("Last update - Sources:", sourcesLastUpdate);
     console.log("Last update - Users:", usersLastUpdate);
 
@@ -72,12 +72,9 @@ onMounted(async () => {
     if (sourcesSync.deletedData && sourcesSync.deletedData.length > 0) {
       await deleteRecords("sources", sourcesSync.deletedData);
     }
-    
+
     if (sourcesSync.updateData || sourcesSync.createData) {
-      const allSourcesData = [
-        ...(sourcesSync.updateData || []),
-        ...(sourcesSync.createData || [])
-      ];
+      const allSourcesData = [...(sourcesSync.updateData || []), ...(sourcesSync.createData || [])];
       if (allSourcesData.length > 0) {
         await upsertRecords("sources", allSourcesData);
       }
@@ -86,12 +83,9 @@ onMounted(async () => {
     if (usersSync.deletedData && usersSync.deletedData.length > 0) {
       await deleteRecords("users", usersSync.deletedData);
     }
-    
+
     if (usersSync.updateData || usersSync.createData) {
-      const allUsersData = [
-        ...(usersSync.updateData || []),
-        ...(usersSync.createData || [])
-      ];
+      const allUsersData = [...(usersSync.updateData || []), ...(usersSync.createData || [])];
       if (allUsersData.length > 0) {
         await upsertRecords("users", allUsersData);
       }
@@ -109,7 +103,6 @@ onMounted(async () => {
     // const userRecord = await getRecordById("users", 1001);
     // console.log("Sample source record:", sourceRecord);
     // console.log("Sample user record:", userRecord);
-
   } catch (error) {
     console.error("Error in onMounted:", error);
   }
@@ -133,9 +126,7 @@ onMounted(async () => {
     <!-- جدول sources -->
     <div v-if="activeTab === 'sources'">
       <h2>جدول منابع</h2>
-      <div v-if="study.length === 0" class="no-data">
-        داده‌ای برای نمایش وجود ندارد
-      </div>
+      <div v-if="study.length === 0" class="no-data">داده‌ای برای نمایش وجود ندارد</div>
       <table v-else>
         <thead>
           <tr>
@@ -187,9 +178,7 @@ onMounted(async () => {
     <!-- جدول users -->
     <div v-if="activeTab === 'users'">
       <h2>جدول کاربران</h2>
-      <div v-if="users.length === 0" class="no-data">
-        داده‌ای برای نمایش وجود ندارد
-      </div>
+      <div v-if="users.length === 0" class="no-data">داده‌ای برای نمایش وجود ندارد</div>
       <table v-else>
         <thead>
           <tr>
