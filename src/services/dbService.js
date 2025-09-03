@@ -7,6 +7,52 @@ const DATABASE_NAME = "simmab";
 const KEY_NAME = "wells3_1708";
 const NAME = "Census";
 
+const myStudy = ["6002", "6007", "4717"];
+const wells3Urls = myStudy.map((id) => ({
+  url: `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${id}.txt`,
+  file: `wells3_${id}`,
+}));
+
+export const databases = {
+  wells3: {
+    urls: wells3Urls,
+    id: "INTEGER PRIMARY KEY",
+    d: "INTEGER",
+    c: "TEXT",
+    e: "INTEGER",
+    h: "TEXT",
+    m: "INTEGER",
+    a: "TEXT",
+    n: "TEXT",
+    q: "TEXT",
+    p: "INTEGER",
+    i: "TEXT",
+    f: "INTEGER",
+    k: "INTEGER",
+    s: "INTEGER",
+    j: "INTEGER",
+    r: "INTEGER",
+    o: "INTEGER",
+    u: "TEXT",
+    g: "REAL",
+    t: "REAL",
+    b: "TEXT",
+    w: "TEXT",
+    v: "TEXT",
+    l: "TEXT",
+    ms: "TEXT",
+  },
+  // users: {
+  //   urls: [
+  //     "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/users_encrypted_base64.txt",
+  //   ],
+  //   id: "INTEGER PRIMARY KEY",
+  //   user_name: "TEXT",
+  //   first_name: "TEXT",
+  //   last_name: "TEXT",
+  //   national_code: "TEXT",
+  // },
+};
 // --- Base64 <-> Uint8Array ---
 function uint8ArrayToBase64(uint8Array) {
   let binary = "";
@@ -83,7 +129,7 @@ let db = null;
 
 // --- دریافت و لود دیتابیس ---
 
-export async function loadDatabaseFromServer(databases) {
+export async function manageIndexedDBFiles() {
   if (Capacitor.getPlatform() === "web") {
     for (const [tableName, { urls }] of Object.entries(databases)) {
       let keysList = await getKeysInIndexedDB(NAME);
@@ -115,86 +161,123 @@ export async function loadDatabaseFromServer(databases) {
     }
   }
 }
-export async function importDatabaseFromServer(databases) {
+export async function importDatabaseFromFiles(tableName) {
   if (Capacitor.getPlatform() === "web") {
     const SQL = await initSqlJs({
       locateFile: (file) => `/sql-wasm.wasm`,
     });
-
-    const savedDb = await loadFromIndexedDB(NAME, KEY_NAME);
-    if (savedDb) {
-      db = new SQL.Database(savedDb);
-      console.log("✅ DB loaded from IndexedDB");
-      return;
-    }
-
-    // دیتابیس نهایی
     const mainDb = new SQL.Database();
+    let keys = await getKeysInIndexedDB(NAME);
 
-    // برای هر جدول در databases
-    for (const [tableName, tableConfig] of Object.entries(databases)) {
-      const { urls, ...columns } = tableConfig;
+    let columns = Object.keys(databases[tableName]).filter((col) => col !== "urls");
+    // ایجاد جدول اگر وجود ندارد
 
-      // ایجاد جدول اگر وجود ندارد
-      const columnDefinitions = Object.entries(columns)
-        .map(([colName, colType]) => `"${colName}" ${colType}`)
-        .join(", ");
-
-      mainDb.exec(`
+    mainDb.exec(`
         CREATE TABLE IF NOT EXISTS "${tableName}" (
-          ${columnDefinitions}
+          ${columns.map((colName) => `"${colName}" ${databases[tableName][colName]}`).join(", ")}
         )
       `);
 
-      // پردازش هر URL برای این جدول
-      for (let i = 0; i < urls.length; i++) {
-        try {
-          const response = await fetch(urls[i].url);
-          if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
-          console.log("resp ", response);
+    for (const key of keys.filter((k) => k.startsWith(`${tableName}_`))) {
+      const file_data = await loadFromIndexedDB(NAME, key);
+      const decryptedData = decryptData(file_data);
 
-          const encryptedText = await response.text();
-          console.log("encryptedText ", encryptedText);
+      const tempDb = new SQL.Database(decryptedData);
 
-          await saveToIndexedDB(NAME, urls[i].file, encryptedText);
+      //       // خواندن داده‌ها از جدول متناظر
+      const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
 
-          const decrypted = decryptData(encryptedText);
-          const tempDb = new SQL.Database(decrypted);
+      const sourceColumns = rows[0].columns;
+      const values = rows[0].values;
 
-          // خواندن داده‌ها از جدول متناظر
-          const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+      //         // درج داده‌ها
+      const stmt = mainDb.prepare(
+        `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
+          .map((c) => `"${c}"`)
+          .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
+      );
 
-          if (rows.length > 0) {
-            const sourceColumns = rows[0].columns;
-            const values = rows[0].values;
-
-            // درج داده‌ها
-            const stmt = mainDb.prepare(
-              `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
-                .map((c) => `"${c}"`)
-                .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
-            );
-
-            for (const row of values) {
-              stmt.run(row);
-            }
-            stmt.free();
-          }
-
-          tempDb.close();
-          console.log(`✅ Table ${tableName} loaded from URL ${i + 1}/${urls.length}`);
-        } catch (error) {
-          console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
-        }
+      for (const row of values) {
+        stmt.run(row);
       }
+      stmt.free();
+
+      tempDb.close();
     }
-
-    // ذخیره دیتابیس نهایی
-    // const mergedBinary = mainDb.export();
-
     db = mainDb;
-    console.log("✅ All tables merged & saved to IndexedDB");
   }
+
+  //   const { urls, ...columns } = tableConfig;
+
+  //   // ایجاد جدول اگر وجود ندارد
+  //   const columnDefinitions = Object.entries(columns)
+  //     .map(([colName, colType]) => `"${colName}" ${colType}`)
+  //     .join(", ");
+
+  //   mainDb.exec(`
+  //     CREATE TABLE IF NOT EXISTS "${tableName}" (
+  //       ${columnDefinitions}
+  //     )
+  //   `);
+
+  // if (savedDb) {
+  //   db = new SQL.Database(savedDb);
+  //   console.log("✅ DB loaded from IndexedDB");
+  //   return;
+  // }
+
+  // دیتابیس نهایی
+
+  // برای هر جدول در databases
+
+  //   // پردازش هر URL برای این جدول
+  //   for (let i = 0; i < urls.length; i++) {
+  //     try {
+  //       const response = await fetch(urls[i].url);
+  //       if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
+  //       console.log("resp ", response);
+
+  //       const encryptedText = await response.text();
+  //       console.log("encryptedText ", encryptedText);
+
+  //       await saveToIndexedDB(NAME, urls[i].file, encryptedText);
+
+  //       const decrypted = decryptData(encryptedText);
+  //       const tempDb = new SQL.Database(decrypted);
+
+  //       // خواندن داده‌ها از جدول متناظر
+  //       const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+
+  //       if (rows.length > 0) {
+  //         const sourceColumns = rows[0].columns;
+  //         const values = rows[0].values;
+
+  //         // درج داده‌ها
+  //         const stmt = mainDb.prepare(
+  //           `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
+  //             .map((c) => `"${c}"`)
+  //             .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
+  //         );
+
+  //         for (const row of values) {
+  //           stmt.run(row);
+  //         }
+  //         stmt.free();
+  //       }
+
+  //       tempDb.close();
+  //       console.log(`✅ Table ${tableName} loaded from URL ${i + 1}/${urls.length}`);
+  //     } catch (error) {
+  //       console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
+  //     }
+  //   }
+  // }
+
+  // ذخیره دیتابیس نهایی
+  // const mergedBinary = mainDb.export();
+
+  // db = mainDb;
+  // console.log("✅ All tables merged & saved to IndexedDB");
 }
 
 // --- دریافت داده‌های جدول ---

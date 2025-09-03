@@ -1,4 +1,6 @@
 <template>
+  <button @click="(e) => importDatabaseFromFiles('wells3')">get Data</button>
+  <button @click="ddd">Load Data</button>
   <div>
     <table>
       <!-- <table v-else> -->
@@ -68,67 +70,22 @@ import { ref, onMounted } from "vue";
 import {
   getTableData,
   getLastUpdate,
-  loadDatabaseFromServer,
+  manageIndexedDBFiles,
+  importDatabaseFromFiles,
   getKeysInIndexedDB,
 } from "@/services/dbService";
 
 const study = ref([]);
 const users = ref([]);
 const activeTab = ref("Wells3");
-const myStudy = ["6002", "6005", "6001"];
-const wells3Urls = myStudy.map((id) => ({
-  url: `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${id}.txt`,
-  file: `wells3_${id}`,
-}));
-const databases = {
-  wells3: {
-    urls: wells3Urls,
-    id: "INTEGER PRIMARY KEY",
-    d: "INTEGER",
-    c: "TEXT",
-    e: "INTEGER",
-    h: "TEXT",
-    m: "INTEGER",
-    a: "TEXT",
-    n: "TEXT",
-    q: "TEXT",
-    p: "INTEGER",
-    i: "TEXT",
-    f: "INTEGER",
-    k: "INTEGER",
-    s: "INTEGER",
-    j: "INTEGER",
-    r: "INTEGER",
-    o: "INTEGER",
-    u: "TEXT",
-    g: "REAL",
-    t: "REAL",
-    b: "TEXT",
-    w: "TEXT",
-    v: "TEXT",
-    l: "TEXT",
-    ms: "TEXT",
-  },
-  // users: {
-  //   urls: [
-  //     "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/users_encrypted_base64.txt",
-  //   ],
-  //   id: "INTEGER PRIMARY KEY",
-  //   user_name: "TEXT",
-  //   first_name: "TEXT",
-  //   last_name: "TEXT",
-  //   national_code: "TEXT",
-  // },
-};
 
+const ddd = async () => {
+  study.value = await getTableData("wells3");
+};
 onMounted(async () => {
   try {
     // 1. ایمپورت دیتابیس
-    await loadDatabaseFromServer(databases);
-
-    // 2. دریافت آخرین تاریخ بروزرسانی برای هر جدول
-    const sourcesLastUpdate = await getLastUpdate("Wells3");
-    // const usersLastUpdate = await getLastUpdate("users");
+    await manageIndexedDBFiles();
 
     // 3. استفاده از mock API برای هر جدول
     // const sourcesSync = await mockSyncApi("sources", sourcesLastUpdate);
@@ -158,7 +115,6 @@ onMounted(async () => {
     // }
 
     // 5. بارگذاری داده‌ها برای نمایش
-    // study.value = await getTableData("wells3");
     // users.value = await getTableData("users");
 
     // console.log("Sources loaded:", study.value.length);
@@ -174,114 +130,6 @@ onMounted(async () => {
   }
 });
 </script>
-
-<!-- <template>
-  <div>
-    <h1>مدیریت داده‌ها</h1>
-
-    <div class="tabs">
-      <button :class="{ active: activeTab === 'Wells3' }" @click="activeTab = 'Wells3'">
-        منابع (Sources) - {{ study.length }} رکورد
-      </button>
-      <button :class="{ active: activeTab === 'users' }" @click="activeTab = 'users'">
-        کاربران (Users) - {{ users.length }} رکورد
-      </button>
-    </div>
-
-    <div v-if="activeTab === 'sources'">
-      <h2>جدول منابع</h2>
-      <div v-if="study.length === 0" class="no-data">داده‌ای برای نمایش وجود ندارد</div>
-      <table v-else>
-        <!-- <table v-else> -->
-<!-- <thead>
-          <tr>
-            <th>id</th>
-            <th>d</th>
-            <th>c</th>
-            <th>e</th>
-            <th>h</th>
-            <th>m</th>
-            <th>a</th>
-            <th>n</th>
-            <th>q</th>
-            <th>p</th>
-            <th>i</th>
-            <th>f</th>
-            <th>k</th>
-            <th>s</th>
-            <th>j</th>
-            <th>r</th>
-            <th>o</th>
-            <th>u</th>
-            <th>g</th>
-            <th>t</th>
-            <th>b</th>
-            <th>w</th>
-            <th>v</th>
-            <th>ms</th>
-            <th>ms</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, index) in study" :key="item.id">
-            <td>{{ item.id }}id</td>
-            <td>{{ item.d }}</td>
-            <td>c{{ item.c }}</td>
-            <td>{{ item.e }}</td>
-            <td>{{ item.h }}</td>
-            <td>{{ item.m }}</td>
-            <td>{{ item.a }}</td>
-            <td>{{ item.n }}</td>
-            <td>{{ item.q }}</td>
-            <td>{{ item.p }}</td>
-            <td>{{ item.i }}</td>
-            <td>{{ item.f }}</td>
-            <td>{{ item.k }}</td>
-            <td>{{ item.s }}</td>
-            <td>{{ item.j }}</td>
-            <td>{{ item.r }}</td>
-            <td>{{ item.o }}</td>
-            <td>{{ item.u }}</td>
-            <td>{{ item.g }}</td>
-            <td>{{ item.t }}</td>
-            <td>{{ item.b }}</td>
-            <td>{{ item.w }}</td>
-            <td>{{ item.v }}</td>
-            <td>{{ item.ms }}</td>
-          </tr>
-        </tbody>
-     
-      </table>
-    </div>
-
-    <div v-if="activeTab === 'users'">
-      <h2>جدول کاربران</h2>
-      <div v-if="users.length === 0" class="no-data">داده‌ای برای نمایش وجود ندارد</div>
-      <table v-else>
-        <thead>
-          <tr>
-            <th>index</th>
-            <th>id</th>
-            <th>user_name</th>
-            <th>first_name</th>
-            <th>last_name</th>
-            <th>national_code</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(user, index) in users" :key="user.id">
-            <td>{{ index + 1 }}</td>
-            <td>{{ user.id }}</td>
-            <td>{{ user.user_name }}</td>
-            <td>{{ user.first_name }}</td>
-            <td>{{ user.last_name }}</td>
-            <td>{{ user.national_code }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div> -->
-<!-- </template> -->
 
 <style>
 table {
