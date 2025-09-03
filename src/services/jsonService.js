@@ -1,11 +1,13 @@
 import { Capacitor } from "@capacitor/core";
 import initSqlJs from "sql.js";
 import CryptoJS from "crypto-js";
-import { RECORDS } from "../../pumps3_min.json";
+import { Pumps3 } from "../../pumps3_min.json";
 import { Wells3 } from "../../wells3_min.json";
+import { abbands } from "../../ab_bands_min.json";
 
 
 const ENCRYPTION_KEY = "0VE7aQMHfwFEbKRc023DGg98RO9qoECTFxmxtGh4";
+const study_code = "4745";
 
 // --- Base64 <-> Uint8Array ---
 function uint8ArrayToBase64(uint8Array) {
@@ -82,7 +84,7 @@ function downloadEncryptedDb(db) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "database.enc"; // پسوند دلخواه
+  a.download = "wells3_" + study_code + ".txt"; // پسوند دلخواه
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -126,7 +128,8 @@ export async function importDatabaseFromServer(databases) {
       try {
         const keys = Object.keys(databases[tableName]); // ستون‌ها طبق تعریف جدول
         // let id = 1;
-        for (const item of Wells3) {
+        console.log("Inserting data into", Wells3);
+        for (const item of Wells3.filter((well) => well.m == study_code)) {
           const stmt = mainDb.prepare(
             `INSERT OR REPLACE INTO ${tableName} (${keys.join(",")}) VALUES (${keys
               .map(() => "?")
@@ -134,10 +137,7 @@ export async function importDatabaseFromServer(databases) {
           );
 
           const rowValues = keys.map((key) => {
-            // if (key === "id") {
-            //   return id; // یا item.id اگر وجود داشت
-            // }
-            return item[key] ?? null; // اگر ستون وجود نداشت، null بگذار
+            return item[key] ?? null;
           });
 
           stmt.run(rowValues);

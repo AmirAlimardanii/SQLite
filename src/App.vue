@@ -16,7 +16,7 @@
 </template>
 
 <script setup>
-import { RECORDS } from "../pumps3_min.json";
+import { Pumps3 } from "../pumps3_min.json";
 import { abbands } from "../ab_bands_min.json";
 import { Wells3 } from "../wells3_min.json";
 import { Pump3 } from "../CensusConst";
@@ -39,7 +39,7 @@ onMounted(() => {
   console.log("records", Wells3);
 });
 const databases = {
-  // Pump3: {
+  // Pumps3: {
   //   id: "INTEGER PRIMARY KEY AUTOINCREMENT",
   //   d: "INTEGER",
   //   c: "TEXT",
@@ -59,7 +59,7 @@ const databases = {
   //   g: "REAL",
   //   t: "REAL",
   // },
-  // AbBand: {
+  // abbands: {
   //   id: "INTEGER PRIMARY KEY AUTOINCREMENT",
   //   d: "INTEGER",
   //   m: "INTEGER",
@@ -72,8 +72,8 @@ const databases = {
   //   k: "INTEGER",
   //   g: "REAL",
   //   t: "REAL",
-  // }
-  wells3: {
+  // },
+  Wells3: {
     id: "INTEGER PRIMARY KEY AUTOINCREMENT",
     d: "INTEGER",
     c: "TEXT",
@@ -100,8 +100,6 @@ const databases = {
     l: "TEXT",
     ms: "TEXT",
   }
-  
-
 };
 
 onMounted(async () => {
