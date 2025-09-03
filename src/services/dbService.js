@@ -3,6 +3,9 @@ import initSqlJs from "sql.js";
 import CryptoJS from "crypto-js";
 
 const ENCRYPTION_KEY = "0VE7aQMHfwFEbKRc023DGg98RO9qoECTFxmxtGh4";
+const DATABASE_NAME = "simmab";
+const KEY_NAME = "wells3_1708";
+const NAME = "Census";
 
 // --- Base64 <-> Uint8Array ---
 function uint8ArrayToBase64(uint8Array) {
@@ -28,16 +31,16 @@ function decryptData(encryptedBase64) {
 }
 
 // --- ذخیره در IndexedDB ---
-async function saveToIndexedDB(data) {
+async function saveToIndexedDB(name, key, data) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("chinook-storage", 1);
+    const request = indexedDB.open(DATABASE_NAME, 1);
     request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore("databases");
+      e.target.result.createObjectStore(name);
     };
     request.onsuccess = (e) => {
       const db = e.target.result;
-      const tx = db.transaction("databases", "readwrite");
-      tx.objectStore("databases").put(data, "chinook");
+      const tx = db.transaction(name, "readwrite");
+      tx.objectStore(name).put(data, key);
       tx.oncomplete = resolve;
       tx.onerror = reject;
     };
@@ -45,16 +48,16 @@ async function saveToIndexedDB(data) {
 }
 
 // --- لود از IndexedDB ---
-async function loadFromIndexedDB() {
+async function loadFromIndexedDB(name, key) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("chinook-storage", 1);
+    const request = indexedDB.open(DATABASE_NAME, 1);
     request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore("databases");
+      e.target.result.createObjectStore(name);
     };
     request.onsuccess = (e) => {
       const db = e.target.result;
-      const tx = db.transaction("databases", "readonly");
-      const getReq = tx.objectStore("databases").get("chinook");
+      const tx = db.transaction(name, "readonly");
+      const getReq = tx.objectStore(name).get(key);
       getReq.onsuccess = () => resolve(getReq.result || null);
       getReq.onerror = reject;
     };
@@ -70,7 +73,7 @@ export async function importDatabaseFromServer(databases) {
       locateFile: (file) => `/sql-wasm.wasm`,
     });
 
-    const savedDb = await loadFromIndexedDB();
+    const savedDb = await loadFromIndexedDB(NAME, KEY_NAME);
     if (savedDb) {
       db = new SQL.Database(savedDb);
       console.log("✅ DB loaded from IndexedDB");
@@ -100,7 +103,12 @@ export async function importDatabaseFromServer(databases) {
         try {
           const response = await fetch(urls[i]);
           if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
+          console.log("resp ", response);
+
           const encryptedText = await response.text();
+          console.log("encryptedText ", encryptedText);
+
+          // await saveToIndexedDB(NAME, KEY_NAME, encryptedText);
 
           const decrypted = decryptData(encryptedText);
           const tempDb = new SQL.Database(decrypted);
@@ -134,8 +142,7 @@ export async function importDatabaseFromServer(databases) {
     }
 
     // ذخیره دیتابیس نهایی
-    const mergedBinary = mainDb.export();
-    await saveToIndexedDB(mergedBinary);
+    // const mergedBinary = mainDb.export();
 
     db = mainDb;
     console.log("✅ All tables merged & saved to IndexedDB");
@@ -222,7 +229,7 @@ export async function deleteRecords(tableName, ids) {
   const query = `DELETE FROM "${tableName}" WHERE id IN (${placeholders})`;
 
   db.run(query, ids);
-  await saveToIndexedDB(db.export());
+  await saveToIndexedDB(NAME, KEY_NAME, db.export());
 
   console.log(`✅ Deleted ${ids.length} records from ${tableName}`);
 }
@@ -248,7 +255,7 @@ export async function upsertRecords(tableName, records) {
     );
   }
 
-  await saveToIndexedDB(db.export());
+  await saveToIndexedDB(NAME, KEY_NAME, db.export());
   console.log(`✅ Upserted ${records.length} records in ${tableName}`);
 }
 
