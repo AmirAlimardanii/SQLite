@@ -101,14 +101,14 @@ export async function importDatabaseFromServer(databases) {
       // پردازش هر URL برای این جدول
       for (let i = 0; i < urls.length; i++) {
         try {
-          const response = await fetch(urls[i]);
+          const response = await fetch(urls[i].url);
           if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
           console.log("resp ", response);
 
           const encryptedText = await response.text();
           console.log("encryptedText ", encryptedText);
 
-          // await saveToIndexedDB(NAME, KEY_NAME, encryptedText);
+          await saveToIndexedDB(NAME, urls[i].file, encryptedText);
 
           const decrypted = decryptData(encryptedText);
           const tempDb = new SQL.Database(decrypted);
