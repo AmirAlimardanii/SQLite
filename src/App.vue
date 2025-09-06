@@ -6,6 +6,7 @@
       <!-- <table v-else> -->
       <thead>
         <tr>
+          <th>index</th>
           <th>id</th>
           <th>d</th>
           <th>c</th>
@@ -35,7 +36,8 @@
       </thead>
       <tbody>
         <tr v-for="(item, index) in study" :key="item.id">
-          <td>{{ item.id }}id</td>
+          <td>{{ index + 1 }}</td>
+          <td>{{ item.id }}</td>
           <td>{{ item.d }}</td>
           <td>c{{ item.c }}</td>
           <td>{{ item.e }}</td>
@@ -69,7 +71,6 @@
 import { ref, onMounted } from "vue";
 import {
   getTableData,
-  getLastUpdate,
   manageIndexedDBFiles,
   importDatabaseFromFiles,
   getKeysInIndexedDB,

@@ -7,7 +7,7 @@ const DATABASE_NAME = "simmab";
 const KEY_NAME = "wells3_1708";
 const NAME = "Census";
 
-const myStudy = ["6002", "6007", "4717"];
+const myStudy = ["6007", "6002"];
 const wells3Urls = myStudy.map((id) => ({
   url: `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${id}.txt`,
   file: `wells3_${id}`,
@@ -90,41 +90,6 @@ function decryptData(encryptedText) {
   }
 }
 
-// --- ذخیره در IndexedDB ---
-// async function saveToIndexedDB(name, key, data) {
-//   return new Promise((resolve, reject) => {
-//     const request = indexedDB.open(DATABASE_NAME, 1);
-//     request.onupgradeneeded = (e) => {
-//       e.target.result.createObjectStore(name);
-//     };
-//     request.onsuccess = (e) => {
-//       const db = e.target.result;
-//       const tx = db.transaction(name, "readwrite");
-//       tx.objectStore(name).put(data, key);
-//       tx.oncomplete = resolve;
-//       tx.onerror = reject;
-//     };
-//   });
-// }
-
-// --- لود از IndexedDB ---
-// async function loadFromIndexedDB(name, key) {
-//   return new Promise((resolve, reject) => {
-//     const request = indexedDB.open(DATABASE_NAME, 1);
-//     request.onupgradeneeded = (e) => {
-//       e.target.result.createObjectStore(name);
-//     };
-//     request.onsuccess = (e) => {
-//       const db = e.target.result;
-//       const tx = db.transaction(name, "readonly");
-//       const getReq = tx.objectStore(name).get(key);
-//       getReq.onsuccess = () => resolve(getReq.result || null);
-//       getReq.onerror = reject;
-//     };
-//     request.onerror = reject;
-//   });
-// }
-
 let db = null;
 
 // --- دریافت و لود دیتابیس ---
@@ -161,7 +126,7 @@ export async function manageIndexedDBFiles() {
     }
   }
 }
-export async function importDatabaseFromFiles(tableName) {
+export async function importDatabaseFromFiles1(tableName) {
   if (Capacitor.getPlatform() === "web") {
     const SQL = await initSqlJs({
       locateFile: (file) => `/sql-wasm.wasm`,
@@ -206,27 +171,6 @@ export async function importDatabaseFromFiles(tableName) {
     }
     db = mainDb;
   }
-
-  //   const { urls, ...columns } = tableConfig;
-
-  //   // ایجاد جدول اگر وجود ندارد
-  //   const columnDefinitions = Object.entries(columns)
-  //     .map(([colName, colType]) => `"${colName}" ${colType}`)
-  //     .join(", ");
-
-  //   mainDb.exec(`
-  //     CREATE TABLE IF NOT EXISTS "${tableName}" (
-  //       ${columnDefinitions}
-  //     )
-  //   `);
-
-  // if (savedDb) {
-  //   db = new SQL.Database(savedDb);
-  //   console.log("✅ DB loaded from IndexedDB");
-  //   return;
-  // }
-
-  // دیتابیس نهایی
 
   // برای هر جدول در databases
 
@@ -280,22 +224,64 @@ export async function importDatabaseFromFiles(tableName) {
   // console.log("✅ All tables merged & saved to IndexedDB");
 }
 
-// --- دریافت داده‌های جدول ---
-// --- دریافت آخرین تاریخ بروزرسانی ---
-export async function getLastUpdate(tableName) {
-  // if (!db) throw new Error("❌ Database not loaded yet");
-  // try {
-  //   if (Capacitor.getPlatform() === "web") {
-  //     const res = db.exec(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
-  //     return res.length > 0 && res[0].values.length > 0 ? res[0].values[0][0] : null;
-  //   } else {
-  //     const res = await db.query(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
-  //     return res.values.length > 0 ? res.values[0].last_update : null;
-  //   }
-  // } catch (error) {
-  //   console.error(`❌ Error getting last update for ${tableName}:`, error);
-  //   return null;
-  // }
+export async function importDatabaseFromFiles(tableName) {
+  if (Capacitor.getPlatform() === "web") {
+    const SQL = await initSqlJs({
+      locateFile: (file) => `/sql-wasm.wasm`,
+    });
+
+    const mainDb = new SQL.Database();
+    let keys = await getKeysInIndexedDB(NAME);
+
+    // ستون‌های تعریف‌شده برای این جدول
+    let columns = Object.keys(databases[tableName]).filter((col) => col !== "urls");
+
+    // ایجاد جدول مقصد با ستون __source
+    mainDb.exec(`
+      CREATE TABLE IF NOT EXISTS "${tableName}" (
+        __source TEXT,
+        ${columns
+          .map((colName) =>
+            colName === "id"
+              ? `"${colName}" INTEGER` // دیگه PRIMARY KEY نیست
+              : `"${colName}" ${databases[tableName][colName]}`
+          )
+          .join(", ")}
+      )
+    `);
+
+    for (const key of keys.filter((k) => k.startsWith(`${tableName}_`))) {
+      const file_data = await loadFromIndexedDB(NAME, key);
+      if (!file_data) continue;
+
+      const decryptedData = decryptData(file_data);
+      const tempDb = new SQL.Database(decryptedData);
+
+      const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+      if (rows.length === 0) {
+        tempDb.close();
+        continue;
+      }
+
+      const sourceColumns = rows[0].columns;
+      const values = rows[0].values;
+
+      const stmt = mainDb.prepare(
+        `INSERT INTO "${tableName}" (__source, ${sourceColumns.map((c) => `"${c}"`).join(", ")})
+         VALUES (?${", ?".repeat(sourceColumns.length)})`
+      );
+
+      for (const row of values) {
+        stmt.run([key, ...row]); // key = wells3_6002 یا wells3_6007 و ...
+      }
+
+      stmt.free();
+      tempDb.close();
+    }
+
+    db = mainDb;
+    console.log(`✅ ${tableName} merged from all sources`);
+  }
 }
 
 export async function getTableData(tableName, limit = 100000) {
@@ -329,23 +315,6 @@ export async function getTableData(tableName, limit = 100000) {
     return res.values;
   }
 }
-
-// --- دریافت آخرین تاریخ بروزرسانی ---
-// export async function getLastUpdate(tableName) {
-//   if (!db) throw new Error("❌ Database not loaded yet");
-
-//   if (Capacitor.getPlatform() === "web") {
-//     const res = db.exec(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
-//     return res.length > 0 ? res[0].values[0][0] : null;
-//   } else {
-//     const res = await db.query(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
-//     return res.values.length > 0 ? res.values[0].last_update : null;
-//   }
-// }
-
-// --- توابع عمومی برای تمام جدول‌ها ---
-
-// --- حذف رکوردها از هر جدول ---
 export async function deleteRecords(tableName, ids) {
   if (!ids || ids.length === 0) return;
   if (!db) throw new Error("❌ Database not loaded yet");
@@ -492,82 +461,6 @@ export async function deletedData(tableName, ids) {
 export async function updateData(tableName, data) {
   return upsertRecords(tableName, data);
 }
-
-// export async function getKeysInIndexedDB(NAME) {
-//   return new Promise((resolve, reject) => {
-//     const request = indexedDB.open("simmab", 1);
-
-//     request.onupgradeneeded = (e) => {
-//       const db = e.target.result;
-//       if (!db.objectStoreNames.contains(NAME)) {
-//         db.createObjectStore(NAME);
-//       }
-//     };
-
-//     request.onsuccess = (e) => {
-//       const db = e.target.result;
-
-//       if (!db.objectStoreNames.contains(NAME)) {
-//         console.error(`❌ ObjectStore "${NAME}" پیدا نشد`);
-//         resolve([]);
-//         return;
-//       }
-
-//       const tx = db.transaction(NAME, "readonly");
-//       const store = tx.objectStore(NAME);
-
-//       const existingKeysReq = store.getAllKeys();
-//       existingKeysReq.onsuccess = () => {
-//         const existingKeys = existingKeysReq.result;
-//         // const result = keysToCheck.map((key) => ({
-//         //   key,
-//         //   exists: existingKeys.includes(key),
-//         // }));
-//         resolve(existingKeys);
-//       };
-//       existingKeysReq.onerror = reject;
-//     };
-
-//     request.onerror = reject;
-//   });
-// }
-
-// async function deleteKeyFromIndexedDB(storeName, key) {
-//   return new Promise((resolve, reject) => {
-//     const request = indexedDB.open("simmab", 1);
-
-//     request.onupgradeneeded = (e) => {
-//       const db = e.target.result;
-//       if (!db.objectStoreNames.contains(storeName)) {
-//         db.createObjectStore(storeName);
-//       }
-//     };
-
-//     request.onsuccess = (e) => {
-//       const db = e.target.result;
-
-//       if (!db.objectStoreNames.contains(storeName)) {
-//         console.error(`❌ ObjectStore "${storeName}" پیدا نشد`);
-//         resolve(false);
-//         return;
-//       }
-
-//       const tx = db.transaction(storeName, "readwrite");
-//       const store = tx.objectStore(storeName);
-//       const deleteReq = store.delete(key);
-
-//       deleteReq.onsuccess = () => {
-//         resolve(true);
-//       };
-//       deleteReq.onerror = (err) => {
-//         console.error("❌ خطا در حذف:", err);
-//         reject(err);
-//       };
-//     };
-
-//     request.onerror = reject;
-//   });
-// }
 
 function manageIndexedDB(storeName, mode, callback) {
   return new Promise((resolve, reject) => {
