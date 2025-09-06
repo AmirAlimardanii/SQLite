@@ -1,6 +1,7 @@
 <template>
   <button @click="(e) => importDatabaseFromFiles('wells3')">get Data</button>
   <button @click="ddd">Load Data</button>
+  <button @click="fetchDB">FETCH DB</button>
   <div>
     <table>
       <!-- <table v-else> -->
@@ -83,53 +84,62 @@ const activeTab = ref("Wells3");
 const ddd = async () => {
   study.value = await getTableData("wells3");
 };
-onMounted(async () => {
+// onMounted(async () => {
+//   try {
+//     // 1. ایمپورت دیتابیس
+//     await manageIndexedDBFiles();
+
+//     // 3. استفاده از mock API برای هر جدول
+//     // const sourcesSync = await mockSyncApi("sources", sourcesLastUpdate);
+//     // const usersSync = await mockSyncApi("users", usersLastUpdate);
+
+//     // 4. پردازش نتایج سینک
+//     // if (sourcesSync.deletedData && sourcesSync.deletedData.length > 0) {
+//     //   await deleteRecords("sources", sourcesSync.deletedData);
+//     // }
+
+//     // if (sourcesSync.updateData || sourcesSync.createData) {
+//     //   const allSourcesData = [...(sourcesSync.updateData || []), ...(sourcesSync.createData || [])];
+//     //   if (allSourcesData.length > 0) {
+//     //     await upsertRecords("sources", allSourcesData);
+//     //   }
+//     // }
+
+//     // if (usersSync.deletedData && usersSync.deletedData.length > 0) {
+//     //   await deleteRecords("users", usersSync.deletedData);
+//     // }
+
+//     // if (usersSync.updateData || usersSync.createData) {
+//     //   const allUsersData = [...(usersSync.updateData || []), ...(usersSync.createData || [])];
+//     //   if (allUsersData.length > 0) {
+//     //     await upsertRecords("users", allUsersData);
+//     //   }
+//     // }
+
+//     // 5. بارگذاری داده‌ها برای نمایش
+//     // users.value = await getTableData("users");
+
+//     // console.log("Sources loaded:", study.value.length);
+//     // console.log("Users loaded:", users.value.length);
+
+//     // 6. تست توابع اضافی (اختیاری)
+//     // const sourceRecord = await getRecordById("Wells3", 5556);
+//     // const userRecord = await getRecordById("users", 1001);
+//     // console.log("Sample source record:", sourceRecord);
+//     // console.log("Sample user record:", userRecord);
+//   } catch (error) {
+//     console.error("Error in onMounted:", error);
+//   }
+// });
+
+const fetchDB = async () => {
   try {
     // 1. ایمپورت دیتابیس
     await manageIndexedDBFiles();
-
-    // 3. استفاده از mock API برای هر جدول
-    // const sourcesSync = await mockSyncApi("sources", sourcesLastUpdate);
-    // const usersSync = await mockSyncApi("users", usersLastUpdate);
-
-    // 4. پردازش نتایج سینک
-    // if (sourcesSync.deletedData && sourcesSync.deletedData.length > 0) {
-    //   await deleteRecords("sources", sourcesSync.deletedData);
-    // }
-
-    // if (sourcesSync.updateData || sourcesSync.createData) {
-    //   const allSourcesData = [...(sourcesSync.updateData || []), ...(sourcesSync.createData || [])];
-    //   if (allSourcesData.length > 0) {
-    //     await upsertRecords("sources", allSourcesData);
-    //   }
-    // }
-
-    // if (usersSync.deletedData && usersSync.deletedData.length > 0) {
-    //   await deleteRecords("users", usersSync.deletedData);
-    // }
-
-    // if (usersSync.updateData || usersSync.createData) {
-    //   const allUsersData = [...(usersSync.updateData || []), ...(usersSync.createData || [])];
-    //   if (allUsersData.length > 0) {
-    //     await upsertRecords("users", allUsersData);
-    //   }
-    // }
-
-    // 5. بارگذاری داده‌ها برای نمایش
-    // users.value = await getTableData("users");
-
-    // console.log("Sources loaded:", study.value.length);
-    // console.log("Users loaded:", users.value.length);
-
-    // 6. تست توابع اضافی (اختیاری)
-    // const sourceRecord = await getRecordById("Wells3", 5556);
-    // const userRecord = await getRecordById("users", 1001);
-    // console.log("Sample source record:", sourceRecord);
-    // console.log("Sample user record:", userRecord);
   } catch (error) {
     console.error("Error in onMounted:", error);
   }
-});
+};
 </script>
 
 <style>
