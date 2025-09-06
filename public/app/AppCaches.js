@@ -1,9 +1,9 @@
 let PostCaches = [];
 let CacheOnly = [];
-let CacheFirst = [];
+let CacheFirst = ["/sql-wasm.wasm"];
 let NetworkOnly = [];
 let NetworkFirst = [];
-let runtimeCache = [];
+let runtimeCache = ["/sql-wasm.wasm"];
 const AppUlr = "//simmab-ir/";
 const StaticCache = "StaticCache-v1.01";
 const DynamicCache = "DynamicCache-v1.01";
@@ -52,7 +52,6 @@ const AppCaches = {
     });
 
     self.addEventListener("fetch", (event) => {
-      console.log("fetch", event);
       event.respondWith(this.fetchApp(event.request));
     });
   },
@@ -105,6 +104,7 @@ const AppCaches = {
       }
       return networkResponse;
     } catch (e) {}
+    p;
   },
   async fetchApp(request) {
     if (request.url.includes("extension") || !(request.url.indexOf("http") === 0)) return;
@@ -115,6 +115,7 @@ const AppCaches = {
     let keys = Object.keys(AssetsCache);
     let isMedia = ["video", "audio"].includes(request.destination) && request.method === "GET";
     let openstreetmap = request.url.includes("openstreetmap.org");
+    let isEncryptDB = request.url.includes("/src/wells/");
     let uiAvatars = request.url.includes("ui-avatars.com");
     let jsonFile =
       request.url.toLowerCase().endsWith(".json") || request.url.toLowerCase().endsWith(".geojson");
@@ -132,6 +133,8 @@ const AppCaches = {
       );
     } else if (jsonFile) {
       return await this.AssetsCacheFunction(request, true, JsonCache);
+    } else if (isEncryptDB) {
+      return await this.AssetsCacheFunction(request, true,   JsonCache);
     } else if (uiAvatars) {
       return await this.AssetsCacheFunction(request, false, AssetsCache["image"]);
     } else if (keys.includes(request.destination)) {

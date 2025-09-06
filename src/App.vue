@@ -2,6 +2,7 @@
   <button @click="(e) => importDatabaseFromFiles('wells3')">get Data</button>
   <button @click="ddd">Load Data</button>
   <button @click="fetchDB">FETCH DB</button>
+  <button @click="removeCaches">remove Caches</button>
   <div>
     <table>
       <!-- <table v-else> -->
@@ -40,7 +41,7 @@
           <td>{{ index + 1 }}</td>
           <td>{{ item.id }}</td>
           <td>{{ item.d }}</td>
-          <td>c{{ item.c }}</td>
+          <td>{{ item.c }}</td>
           <td>{{ item.e }}</td>
           <td>{{ item.h }}</td>
           <td>{{ item.m }}</td>
@@ -74,7 +75,7 @@ import {
   getTableData,
   manageIndexedDBFiles,
   importDatabaseFromFiles,
-  getKeysInIndexedDB,
+  wells3Urls,
 } from "@/services/dbService";
 
 const study = ref([]);
@@ -132,6 +133,17 @@ const ddd = async () => {
 //   }
 // });
 
+const removeCaches = async () => {
+  caches.open("JsonCache-v1.01").then((cache) => {
+    cache.keys().then((keys) => {
+      Promise.all(
+        keys.map(async (request) => {
+          if (!wells3Urls.map(({ url }) => url).includes(request.url)) await cache.delete(request);
+        })
+      );
+    });
+  });
+};
 const fetchDB = async () => {
   try {
     // 1. ایمپورت دیتابیس

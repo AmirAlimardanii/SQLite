@@ -7,8 +7,8 @@ const DATABASE_NAME = "simmab";
 const KEY_NAME = "wells3_1708";
 const NAME = "Census";
 
-const myStudy = ["6007", "6002"];
-const wells3Urls = myStudy.map((id) => ({
+const myStudy = ["4717", "1708"];
+export const wells3Urls = myStudy.map((id) => ({
   url: `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${id}.txt`,
   file: `wells3_${id}`,
 }));
@@ -94,7 +94,7 @@ let db = null;
 
 // --- دریافت و لود دیتابیس ---
 
-export async function manageIndexedDBFiles() {
+export async function manageIndexedDBFiles1() {
   if (Capacitor.getPlatform() === "web") {
     for (const [tableName, { urls }] of Object.entries(databases)) {
       let keysList = await getKeysInIndexedDB(NAME);
@@ -122,6 +122,85 @@ export async function manageIndexedDBFiles() {
             console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
           }
         }
+      }
+    }
+  }
+}
+
+export async function importDatabaseFromFiles(tableName) {
+  if (Capacitor.getPlatform() === "web") {
+    const SQL = await initSqlJs({
+      locateFile: (file) => `/sql-wasm.wasm`,
+    });
+
+    const mainDb = new SQL.Database();
+
+    // ستون‌های تعریف‌شده برای این جدول
+    let columns = Object.keys(databases[tableName]).filter((col) => col !== "urls");
+    let urls = databases[tableName].urls;
+
+    // ایجاد جدول مقصد با ستون __source
+    mainDb.exec(`
+      CREATE TABLE IF NOT EXISTS "${tableName}" (
+        __source TEXT,
+        ${columns
+          .map((colName) =>
+            colName === "id"
+              ? `"${colName}" INTEGER` // دیگه PRIMARY KEY نیست
+              : `"${colName}" ${databases[tableName][colName]}`
+          )
+          .join(", ")}
+      )
+    `);
+    for (const url of urls) {
+      const response = await fetch(url?.url);
+      if (!response.ok) continue;
+      const encryptedText = await response.text();
+      const decryptedData = decryptData(encryptedText);
+      const tempDb = new SQL.Database(decryptedData);
+      const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+      if (rows.length === 0) {
+        tempDb.close();
+        continue;
+      }
+      const sourceColumns = rows[0].columns;
+      const values = rows[0].values;
+
+      const stmt = mainDb.prepare(
+        `INSERT INTO "${tableName}" (__source, ${sourceColumns.map((c) => `"${c}"`).join(", ")})
+         VALUES (?${", ?".repeat(sourceColumns.length)})`
+      );
+      for (const row of values) {
+        stmt.run(["wells3", ...row]); // key = wells3_6002 یا wells3_6007 و ...
+      }
+      stmt.free();
+      tempDb.close();
+    }
+
+    db = mainDb;
+    console.log(`✅ ${tableName} merged from all sources`);
+  }
+}
+export async function manageIndexedDBFiles() {
+  if (Capacitor.getPlatform() === "web") {
+    for (const [tableName, { urls }] of Object.entries(databases)) {
+      // پردازش هر URL برای این جدول
+      for (let i = 0; i < urls.length; i++) {
+        // const savedDb = await loadFromIndexedDB(NAME, urls[i].file);
+        // if (!savedDb || savedDb.length < 5) {
+        try {
+          const response = await fetch(urls[i].url);
+          if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
+          console.log("resp ", response);
+
+          const encryptedText = await response.text();
+          console.log("encryptedText ", encryptedText);
+
+          // await saveToIndexedDB(NAME, urls[i].file, encryptedText);
+        } catch (error) {
+          console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
+        }
+        // }
       }
     }
   }
@@ -224,7 +303,7 @@ export async function importDatabaseFromFiles1(tableName) {
   // console.log("✅ All tables merged & saved to IndexedDB");
 }
 
-export async function importDatabaseFromFiles(tableName) {
+export async function importDatabaseFromFiles2(tableName) {
   if (Capacitor.getPlatform() === "web") {
     const SQL = await initSqlJs({
       locateFile: (file) => `/sql-wasm.wasm`,
