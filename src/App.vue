@@ -1,8 +1,5 @@
 <template>
-  <button @click="(e) => importDatabaseFromFiles('wells3')">get Data</button>
   <button @click="ddd">Load Data</button>
-  <button @click="fetchDB">FETCH DB</button>
-  <button @click="removeCaches">remove Caches</button>
   <div>
     <table>
       <!-- <table v-else> -->
@@ -70,87 +67,45 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from "vue";
-import {
-  getTableData,
-  manageIndexedDBFiles,
-  importDatabaseFromFiles,
-  wells3Urls,
-} from "@/services/dbService";
+import { ref, onBeforeMount, onBeforeUnmount } from "vue";
+import { getTableData, createDatabase } from "@/services/dbService";
 
 const study = ref([]);
-const users = ref([]);
-const activeTab = ref("Wells3");
 
 const ddd = async () => {
   study.value = await getTableData("wells3");
 };
-// onMounted(async () => {
-//   try {
-//     // 1. ایمپورت دیتابیس
-//     await manageIndexedDBFiles();
 
-//     // 3. استفاده از mock API برای هر جدول
-//     // const sourcesSync = await mockSyncApi("sources", sourcesLastUpdate);
-//     // const usersSync = await mockSyncApi("users", usersLastUpdate);
+let checkSwCount = 0;
+let checkSwActive = null;
+onBeforeMount(() => {
+  if ("serviceWorker" in navigator) {
+    checkSwActive = setInterval(() => {
+      navigator.serviceWorker.ready.then((res) => {
+        if (res.active.state === "activated") {
+          checkNewInstall();
+          clearInterval(checkSwActive);
+        }
+      });
+      checkSwCount++;
+      if (checkSwCount > 4) {
+        window.location.href = "/";
+        console.log("checkSwCount", checkSwCount);
+      }
+    }, 1000);
+  } else createDatabase("wells3");
+});
 
-//     // 4. پردازش نتایج سینک
-//     // if (sourcesSync.deletedData && sourcesSync.deletedData.length > 0) {
-//     //   await deleteRecords("sources", sourcesSync.deletedData);
-//     // }
+onBeforeUnmount(() => {
+  if (checkSwActive) clearInterval(checkSwActive);
+});
 
-//     // if (sourcesSync.updateData || sourcesSync.createData) {
-//     //   const allSourcesData = [...(sourcesSync.updateData || []), ...(sourcesSync.createData || [])];
-//     //   if (allSourcesData.length > 0) {
-//     //     await upsertRecords("sources", allSourcesData);
-//     //   }
-//     // }
-
-//     // if (usersSync.deletedData && usersSync.deletedData.length > 0) {
-//     //   await deleteRecords("users", usersSync.deletedData);
-//     // }
-
-//     // if (usersSync.updateData || usersSync.createData) {
-//     //   const allUsersData = [...(usersSync.updateData || []), ...(usersSync.createData || [])];
-//     //   if (allUsersData.length > 0) {
-//     //     await upsertRecords("users", allUsersData);
-//     //   }
-//     // }
-
-//     // 5. بارگذاری داده‌ها برای نمایش
-//     // users.value = await getTableData("users");
-
-//     // console.log("Sources loaded:", study.value.length);
-//     // console.log("Users loaded:", users.value.length);
-
-//     // 6. تست توابع اضافی (اختیاری)
-//     // const sourceRecord = await getRecordById("Wells3", 5556);
-//     // const userRecord = await getRecordById("users", 1001);
-//     // console.log("Sample source record:", sourceRecord);
-//     // console.log("Sample user record:", userRecord);
-//   } catch (error) {
-//     console.error("Error in onMounted:", error);
-//   }
-// });
-
-const removeCaches = async () => {
-  caches.open("JsonCache-v1.01").then((cache) => {
-    cache.keys().then((keys) => {
-      Promise.all(
-        keys.map(async (request) => {
-          if (!wells3Urls.map(({ url }) => url).includes(request.url)) await cache.delete(request);
-        })
-      );
-    });
-  });
-};
-const fetchDB = async () => {
-  try {
-    // 1. ایمپورت دیتابیس
-    await manageIndexedDBFiles();
-  } catch (error) {
-    console.error("Error in onMounted:", error);
-  }
+const checkNewInstall = () => {
+  let InstallTemporary = localStorage.getItem("InstallTemporary");
+  if (InstallTemporary === null) {
+    localStorage.setItem("InstallTemporary", "refresh");
+    window.location.href = "/";
+  } else createDatabase("wells3");
 };
 </script>
 
