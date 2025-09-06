@@ -73,12 +73,12 @@ import {
   getTableData,
   manageIndexedDBFiles,
   importDatabaseFromFiles,
-  getKeysInIndexedDB,
+  // getKeysInIndexedDB,
 } from "@/services/dbService";
 
 const study = ref([]);
-const users = ref([]);
-const activeTab = ref("Wells3");
+// const users = ref([]);
+// const activeTab = ref("Wells3");
 
 const ddd = async () => {
   study.value = await getTableData("wells3");
