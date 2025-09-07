@@ -1,13 +1,68 @@
 import { Capacitor } from "@capacitor/core";
+
+// import springs3 from "../../new_data/wells3.json";
+import sammab  from "../../new_data/Wells_samab.json";
+
 import initSqlJs from "sql.js";
 import CryptoJS from "crypto-js";
-import { Pumps3 } from "../../pumps3_min.json";
-import { Wells3 } from "../../wells3_min.json";
-import { abbands } from "../../ab_bands_min.json";
-
-
 const ENCRYPTION_KEY = "0VE7aQMHfwFEbKRc023DGg98RO9qoECTFxmxtGh4";
-const study_code = "4717";
+const study_codes = [
+  "4723",
+  "6005",
+  "4721",
+  "4717",
+  "4724",
+  "4728",
+  "6011",
+  "4726",
+  "4740",
+  "5101",
+  "4716",
+  "4734",
+  "6001",
+  "4727",
+  "4730",
+  "4735",
+  "4739",
+  "5102",
+  "4736",
+  "6004",
+  "6008",
+  "6009",
+  "6010",
+  "6012",
+  "1708",
+  "4722",
+  "4725",
+  "4729",
+  "4737",
+  "4738",
+  "4741",
+  "5103",
+  "6002",
+  "6003",
+  "6006",
+  "6007",
+  "6013",
+  "5104",
+  "4745",
+];
+
+let code = localStorage.getItem("code") || 0;
+const study_code = study_codes[code];
+
+function delll() {
+  indexedDB.deleteDatabase("atey-storage").onsuccess =
+    function () {
+      console.log("Deleted database successfully");
+    }.onerror =
+    function () {
+      console.log("Couldn't delete database");
+    }.onblocked =
+      function () {
+        console.log("Couldn't delete database due to the operation being blocked");
+      };
+}
 
 // --- Base64 <-> Uint8Array ---
 function uint8ArrayToBase64(uint8Array) {
@@ -35,14 +90,14 @@ function decryptData(encryptedBase64) {
 // --- ذخیره در IndexedDB ---
 async function saveToIndexedDB(data) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("chinook-storage", 1);
+    const request = indexedDB.open("atey-storage", 1);
     request.onupgradeneeded = (e) => {
       e.target.result.createObjectStore("databases");
     };
     request.onsuccess = (e) => {
       const db = e.target.result;
       const tx = db.transaction("databases", "readwrite");
-      tx.objectStore("databases").put(data, "chinook");
+      tx.objectStore("databases").put(data, "sammab");
       tx.oncomplete = resolve;
       tx.onerror = reject;
     };
@@ -52,14 +107,14 @@ async function saveToIndexedDB(data) {
 // --- لود از IndexedDB ---
 async function loadFromIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("chinook-storage", 1);
+    const request = indexedDB.open("atey-storage", 1);
     request.onupgradeneeded = (e) => {
       e.target.result.createObjectStore("databases");
     };
     request.onsuccess = (e) => {
       const db = e.target.result;
       const tx = db.transaction("databases", "readonly");
-      const getReq = tx.objectStore("databases").get("chinook");
+      const getReq = tx.objectStore("databases").get("sammab");
       getReq.onsuccess = () => resolve(getReq.result || null);
       getReq.onerror = reject;
     };
@@ -67,7 +122,6 @@ async function loadFromIndexedDB() {
 }
 
 let db = null;
-
 
 // function downloadEncryptedDb(db) {
 //   // دیتابیس رو بگیر
@@ -84,7 +138,7 @@ let db = null;
 //   const url = URL.createObjectURL(blob);
 //   const a = document.createElement("a");
 //   a.href = url;
-//   a.download = "wells3_" + study_code + ".txt"; // پسوند دلخواه
+//   a.download = "springs3_" + study_code + ".txt"; // پسوند دلخواه
 //   document.body.appendChild(a);
 //   a.click();
 //   document.body.removeChild(a);
@@ -94,7 +148,7 @@ let db = null;
 // }
 
 function downloadEncryptedDb(db) {
-  const binaryArray = db.export();                // SQLite → Uint8Array
+  const binaryArray = db.export(); // SQLite → Uint8Array
   const base64 = uint8ArrayToBase64(binaryArray); // Uint8Array → Base64
 
   const encrypted = CryptoJS.AES.encrypt(base64, ENCRYPTION_KEY).toString();
@@ -103,9 +157,15 @@ function downloadEncryptedDb(db) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "wells3_" + study_code + ".txt"; 
+  a.download = "sammab_" + study_code + ".txt";
   a.click();
   URL.revokeObjectURL(url);
+  localStorage.setItem("code", Number(code) + 1 );
+  if(Number(code) < study_codes.length)
+  {
+    delll();
+    document.location.href = "/";
+  }
 }
 
 // --- دریافت و لود دیتابیس ---
@@ -143,8 +203,8 @@ export async function importDatabaseFromServer(databases) {
       try {
         const keys = Object.keys(databases[tableName]); // ستون‌ها طبق تعریف جدول
         // let id = 1;
-        console.log("Inserting data into", Wells3);
-        for (const item of Wells3.filter((well) => well.m == study_code)) {
+        // console.log("Inserting data into", sammab);
+        for (const item of sammab.filter((itm) => itm.study_code == study_code)) {
           const stmt = mainDb.prepare(
             `INSERT OR REPLACE INTO ${tableName} (${keys.join(",")}) VALUES (${keys
               .map(() => "?")
