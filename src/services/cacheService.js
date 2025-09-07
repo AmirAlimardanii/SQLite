@@ -71,6 +71,18 @@ function decryptData(encryptedText) {
 
 let db = null;
 
+const removeExtraCaches = async () => {
+  caches.open("JsonCache-v1.01").then((cache) => {
+    cache.keys().then((keys) => {
+      Promise.all(
+        keys.map(async (request) => {
+          if (!wells3Urls.map(({ url }) => url).includes(request.url)) await cache.delete(request);
+        })
+      );
+    });
+  });
+};
+
 export async function createDatabase(tableName) {
   if (Capacitor.getPlatform() === "web") {
     const SQL = await initSqlJs({
@@ -159,15 +171,3 @@ export async function getTableData(tableName, limit = 100000) {
     return res.values;
   }
 }
-
-const removeExtraCaches = async () => {
-  caches.open("JsonCache-v1.01").then((cache) => {
-    cache.keys().then((keys) => {
-      Promise.all(
-        keys.map(async (request) => {
-          if (!wells3Urls.map(({ url }) => url).includes(request.url)) await cache.delete(request);
-        })
-      );
-    });
-  });
-};

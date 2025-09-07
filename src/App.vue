@@ -68,7 +68,7 @@
 </template>
 <script setup>
 import { ref, onBeforeMount, onBeforeUnmount } from "vue";
-import { getTableData, createDatabase } from "@/services/dbService";
+import { getTableData, createDatabase } from "@/services/cacheService";
 
 const study = ref([]);
 
