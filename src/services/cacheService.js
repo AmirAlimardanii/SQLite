@@ -379,7 +379,7 @@ const SQLCIPHER_KEY = ENCRYPTION_KEY.substring(0, 32); // استفاده از 32
 
 const TEST_KEY = "amir1234".padEnd(32, "0");
 
-const myStudy = ["4717", "6002"];
+const myStudy = ["4717"];
 
 // URLs برای پلتفرم‌های مختلف
 export const wells3Urls = {
@@ -418,7 +418,7 @@ function decryptDataWeb(encryptedText) {
 
 let db = null;
 
-export async function createDatabase(tableName) {
+export async function createDatabase1(tableName) {
   const platform = Capacitor.getPlatform();
 
   if (platform === "web") {
@@ -491,6 +491,88 @@ export async function createDatabase(tableName) {
       mode: "secret", // حالت درست برای اتصال به دیتابیس رمزگذاری‌شده
       version: 1,
       secret: TEST_KEY, // کلید SQLCipher
+    });
+
+    db = await sqlite.open({ database: tableName });
+    console.log(`✅ ${tableName} ready on Native with SQLCipher`);
+    return db;
+  }
+}
+
+export async function createDatabase(tableName) {
+  const platform = Capacitor.getPlatform();
+
+  if (platform === "web") {
+    const SQL = await initSqlJs({
+      locateFile: (file) => `/sql-wasm.wasm`,
+    });
+
+    const mainDb = new SQL.Database();
+    const urls = databases[tableName].urls.web;
+
+    for (const { url, file } of urls) {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+
+      const encryptedText = await response.text();
+      const decryptedData = decryptDataWeb(encryptedText);
+
+      const tempDb = new SQL.Database(decryptedData);
+      const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+      if (rows.length === 0) continue;
+
+      const sourceColumns = rows[0].columns;
+
+      // اگر جدول هنوز ایجاد نشده، داینامیک ستون‌ها رو اضافه کن
+      if (
+        !mainDb.exec(`SELECT name FROM sqlite_master WHERE type='table' AND name='${tableName}'`)
+          .length
+      ) {
+        mainDb.exec(`
+          CREATE TABLE "${tableName}" (
+            __source TEXT,
+            ${sourceColumns.map((col) => `"${col}" TEXT`).join(", ")}
+          )
+        `);
+      }
+
+      // Insert داده‌ها
+      const values = rows[0].values;
+      const stmt = mainDb.prepare(
+        `INSERT INTO "${tableName}" (__source, ${sourceColumns.map((c) => `"${c}"`).join(", ")})
+         VALUES (?${", ?".repeat(sourceColumns.length)})`
+      );
+      for (const row of values) stmt.run([file, ...row]);
+      stmt.free();
+      tempDb.close();
+    }
+
+    db = mainDb;
+    console.log(`✅ ${tableName} ready on Web`);
+    return db;
+  } else {
+    // بخش نیتیو بدون تغییر
+    const sqlite = CapacitorSQLite;
+    const urls = databases[tableName].urls.native;
+
+    const { url, file } = urls[0];
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("❌ Failed to fetch DB file");
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Db = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+    await Filesystem.writeFile({
+      path: `${tableName}.db`,
+      data: base64Db,
+      directory: Directory.Data,
+    });
+
+    await sqlite.createConnection({
+      database: tableName,
+      encrypted: true,
+      mode: "secret",
+      version: 1,
+      secret: TEST_KEY,
     });
 
     db = await sqlite.open({ database: tableName });
