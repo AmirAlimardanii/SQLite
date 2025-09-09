@@ -2,8 +2,57 @@ import { Capacitor } from "@capacitor/core";
 import initSqlJs from "sql.js";
 import CryptoJS from "crypto-js";
 
-const ENCRYPTION_KEY = "MySecretKey12345";
+const ENCRYPTION_KEY = "0VE7aQMHfwFEbKRc023DGg98RO9qoECTFxmxtGh4";
+const DATABASE_NAME = "simmab";
+const KEY_NAME = "wells3_1708";
+const NAME = "Census";
 
+const myStudy = ["6007", "6002"];
+const wells3Urls = myStudy.map((id) => ({
+  url: `https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/src/wells/wells3_${id}.txt`,
+  file: `wells3_${id}`,
+}));
+
+export const databases = {
+  wells3: {
+    urls: wells3Urls,
+    id: "INTEGER PRIMARY KEY",
+    d: "INTEGER",
+    c: "TEXT",
+    e: "INTEGER",
+    h: "TEXT",
+    m: "INTEGER",
+    a: "TEXT",
+    n: "TEXT",
+    q: "TEXT",
+    p: "INTEGER",
+    i: "TEXT",
+    f: "INTEGER",
+    k: "INTEGER",
+    s: "INTEGER",
+    j: "INTEGER",
+    r: "INTEGER",
+    o: "INTEGER",
+    u: "TEXT",
+    g: "REAL",
+    t: "REAL",
+    b: "TEXT",
+    w: "TEXT",
+    v: "TEXT",
+    l: "TEXT",
+    ms: "TEXT",
+  },
+  // users: {
+  //   urls: [
+  //     "https://raw.githubusercontent.com/AmirAlimardanii/SQLite/refs/heads/th-db/users_encrypted_base64.txt",
+  //   ],
+  //   id: "INTEGER PRIMARY KEY",
+  //   user_name: "TEXT",
+  //   first_name: "TEXT",
+  //   last_name: "TEXT",
+  //   national_code: "TEXT",
+  // },
+};
 // --- Base64 <-> Uint8Array ---
 function uint8ArrayToBase64(uint8Array) {
   let binary = "";
@@ -21,148 +70,217 @@ function base64ToUint8Array(base64) {
 }
 
 // --- رمزگشایی ---
-function decryptData(encryptedBase64) {
-  const bytes = CryptoJS.AES.decrypt(encryptedBase64, ENCRYPTION_KEY);
-  const originalBase64 = bytes.toString(CryptoJS.enc.Utf8);
-  return base64ToUint8Array(originalBase64);
-}
+function decryptData(encryptedText) {
+  try {
+    // AES decrypt → WordArray
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
 
-// --- ذخیره در IndexedDB ---
-async function saveToIndexedDB(data) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("chinook-storage", 1);
-    request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore("databases");
-    };
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      const tx = db.transaction("databases", "readwrite");
-      tx.objectStore("databases").put(data, "chinook");
-      tx.oncomplete = resolve;
-      tx.onerror = reject;
-    };
-  });
-}
+    // WordArray → UTF8 (این مرحله باید Base64 بده چون اون‌طوری ذخیره کرده بودیم)
+    const base64 = decrypted.toString(CryptoJS.enc.Utf8);
 
-// --- لود از IndexedDB ---
-async function loadFromIndexedDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("chinook-storage", 1);
-    request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore("databases");
-    };
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      const tx = db.transaction("databases", "readonly");
-      const getReq = tx.objectStore("databases").get("chinook");
-      getReq.onsuccess = () => resolve(getReq.result || null);
-      getReq.onerror = reject;
-    };
-  });
+    if (!base64) {
+      throw new Error("❌ Decryption failed: empty base64 output");
+    }
+
+    // Base64 → Uint8Array → SQLite binary
+    return base64ToUint8Array(base64);
+  } catch (error) {
+    console.error("❌ Error while decrypting data:", error);
+    throw error;
+  }
 }
 
 let db = null;
 
 // --- دریافت و لود دیتابیس ---
-export async function importDatabaseFromServer(databases) {
+
+export async function manageIndexedDBFiles() {
+  if (Capacitor.getPlatform() === "web") {
+    for (const [tableName, { urls }] of Object.entries(databases)) {
+      let keysList = await getKeysInIndexedDB(NAME);
+      let allowKeys = urls.map(({ file }) => file);
+      let mostRemoveKeys = keysList.filter((key) => !allowKeys.includes(key));
+
+      if (mostRemoveKeys.length > 0) {
+        await Promise.all(mostRemoveKeys.map((key) => deleteKeyFromIndexedDB(NAME, key)));
+      }
+
+      // پردازش هر URL برای این جدول
+      for (let i = 0; i < urls.length; i++) {
+        const savedDb = await loadFromIndexedDB(NAME, urls[i].file);
+        if (!savedDb || savedDb.length < 5) {
+          try {
+            const response = await fetch(urls[i].url);
+            if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
+            console.log("resp ", response);
+
+            const encryptedText = await response.text();
+            console.log("encryptedText ", encryptedText);
+
+            await saveToIndexedDB(NAME, urls[i].file, encryptedText);
+          } catch (error) {
+            console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
+          }
+        }
+      }
+    }
+  }
+}
+export async function importDatabaseFromFiles1(tableName) {
+  if (Capacitor.getPlatform() === "web") {
+    const SQL = await initSqlJs({
+      locateFile: (file) => `/sql-wasm.wasm`,
+    });
+    const mainDb = new SQL.Database();
+    let keys = await getKeysInIndexedDB(NAME);
+
+    let columns = Object.keys(databases[tableName]).filter((col) => col !== "urls");
+    // ایجاد جدول اگر وجود ندارد
+
+    mainDb.exec(`
+        CREATE TABLE IF NOT EXISTS "${tableName}" (
+          ${columns.map((colName) => `"${colName}" ${databases[tableName][colName]}`).join(", ")}
+        )
+      `);
+
+    for (const key of keys.filter((k) => k.startsWith(`${tableName}_`))) {
+      const file_data = await loadFromIndexedDB(NAME, key);
+      const decryptedData = decryptData(file_data);
+
+      const tempDb = new SQL.Database(decryptedData);
+
+      //       // خواندن داده‌ها از جدول متناظر
+      const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+
+      const sourceColumns = rows[0].columns;
+      const values = rows[0].values;
+
+      //         // درج داده‌ها
+      const stmt = mainDb.prepare(
+        `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
+          .map((c) => `"${c}"`)
+          .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
+      );
+
+      for (const row of values) {
+        stmt.run(row);
+      }
+      stmt.free();
+
+      tempDb.close();
+    }
+    db = mainDb;
+  }
+
+  // برای هر جدول در databases
+
+  //   // پردازش هر URL برای این جدول
+  //   for (let i = 0; i < urls.length; i++) {
+  //     try {
+  //       const response = await fetch(urls[i].url);
+  //       if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
+  //       console.log("resp ", response);
+
+  //       const encryptedText = await response.text();
+  //       console.log("encryptedText ", encryptedText);
+
+  //       await saveToIndexedDB(NAME, urls[i].file, encryptedText);
+
+  //       const decrypted = decryptData(encryptedText);
+  //       const tempDb = new SQL.Database(decrypted);
+
+  //       // خواندن داده‌ها از جدول متناظر
+  //       const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+
+  //       if (rows.length > 0) {
+  //         const sourceColumns = rows[0].columns;
+  //         const values = rows[0].values;
+
+  //         // درج داده‌ها
+  //         const stmt = mainDb.prepare(
+  //           `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
+  //             .map((c) => `"${c}"`)
+  //             .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
+  //         );
+
+  //         for (const row of values) {
+  //           stmt.run(row);
+  //         }
+  //         stmt.free();
+  //       }
+
+  //       tempDb.close();
+  //       console.log(`✅ Table ${tableName} loaded from URL ${i + 1}/${urls.length}`);
+  //     } catch (error) {
+  //       console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
+  //     }
+  //   }
+  // }
+
+  // ذخیره دیتابیس نهایی
+  // const mergedBinary = mainDb.export();
+
+  // db = mainDb;
+  // console.log("✅ All tables merged & saved to IndexedDB");
+}
+
+export async function importDatabaseFromFiles(tableName) {
   if (Capacitor.getPlatform() === "web") {
     const SQL = await initSqlJs({
       locateFile: (file) => `/sql-wasm.wasm`,
     });
 
-    const savedDb = await loadFromIndexedDB();
-    if (savedDb) {
-      db = new SQL.Database(savedDb);
-      console.log("✅ DB loaded from IndexedDB");
-      return;
-    }
-
-    // دیتابیس نهایی
     const mainDb = new SQL.Database();
+    let keys = await getKeysInIndexedDB(NAME);
 
-    // برای هر جدول در databases
-    for (const [tableName, tableConfig] of Object.entries(databases)) {
-      const { urls, ...columns } = tableConfig;
+    // ستون‌های تعریف‌شده برای این جدول
+    let columns = Object.keys(databases[tableName]).filter((col) => col !== "urls");
 
-      // ایجاد جدول اگر وجود ندارد
-      const columnDefinitions = Object.entries(columns)
-        .map(([colName, colType]) => `"${colName}" ${colType}`)
-        .join(", ");
+    // ایجاد جدول مقصد با ستون __source
+    mainDb.exec(`
+      CREATE TABLE IF NOT EXISTS "${tableName}" (
+        __source TEXT,
+        ${columns
+          .map((colName) =>
+            colName === "id"
+              ? `"${colName}" INTEGER` // دیگه PRIMARY KEY نیست
+              : `"${colName}" ${databases[tableName][colName]}`
+          )
+          .join(", ")}
+      )
+    `);
 
-      mainDb.exec(`
-        CREATE TABLE IF NOT EXISTS "${tableName}" (
-          ${columnDefinitions}
-        )
-      `);
+    for (const key of keys.filter((k) => k.startsWith(`${tableName}_`))) {
+      const file_data = await loadFromIndexedDB(NAME, key);
+      if (!file_data) continue;
 
-      // پردازش هر URL برای این جدول
-      for (let i = 0; i < urls.length; i++) {
-        try {
-          const response = await fetch(urls[i]);
-          if (!response.ok) throw new Error(`❌ Failed to download DB from ${urls[i]}`);
-          const encryptedText = await response.text();
+      const decryptedData = decryptData(file_data);
+      const tempDb = new SQL.Database(decryptedData);
 
-          const decrypted = decryptData(encryptedText);
-          const tempDb = new SQL.Database(decrypted);
-
-          // خواندن داده‌ها از جدول متناظر
-          const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
-
-          if (rows.length > 0) {
-            const sourceColumns = rows[0].columns;
-            const values = rows[0].values;
-
-            // درج داده‌ها
-            const stmt = mainDb.prepare(
-              `INSERT OR REPLACE INTO "${tableName}" (${sourceColumns
-                .map((c) => `"${c}"`)
-                .join(", ")}) VALUES (${sourceColumns.map(() => "?").join(", ")})`
-            );
-
-            for (const row of values) {
-              stmt.run(row);
-            }
-            stmt.free();
-          }
-
-          tempDb.close();
-          console.log(`✅ Table ${tableName} loaded from URL ${i + 1}/${urls.length}`);
-        } catch (error) {
-          console.error(`❌ Error loading table ${tableName} from ${urls[i]}:`, error);
-        }
+      const rows = tempDb.exec(`SELECT * FROM "${tableName}"`);
+      if (rows.length === 0) {
+        tempDb.close();
+        continue;
       }
-    }
 
-    // ذخیره دیتابیس نهایی
-    const mergedBinary = mainDb.export();
-    await saveToIndexedDB(mergedBinary);
+      const sourceColumns = rows[0].columns;
+      const values = rows[0].values;
+
+      const stmt = mainDb.prepare(
+        `INSERT INTO "${tableName}" (__source, ${sourceColumns.map((c) => `"${c}"`).join(", ")})
+         VALUES (?${", ?".repeat(sourceColumns.length)})`
+      );
+
+      for (const row of values) {
+        stmt.run([key, ...row]); // key = wells3_6002 یا wells3_6007 و ...
+      }
+
+      stmt.free();
+      tempDb.close();
+    }
 
     db = mainDb;
-    console.log("✅ All tables merged & saved to IndexedDB");
-  }
-}
-
-// --- دریافت داده‌های جدول ---
-export async function getLastUpdate(tableName) {
-  if (!db) throw new Error("❌ Database not loaded yet");
-
-  let orderBy = "updated_at";
-  if (Capacitor.getPlatform() === "web") {
-    const tableInfo = db.exec(`PRAGMA table_info("${tableName}")`);
-    const columns = tableInfo[0].values.map((row) => row[1]);
-    if (!columns.includes("updated_at")) {
-      orderBy = "id";
-    }
-    const res = db.exec(`SELECT MAX(${orderBy}) AS last_update FROM "${tableName}"`);
-    return res.length > 0 ? res[0].values[0][0] : null;
-  } else {
-    const tableInfo = await db.query(`PRAGMA table_info("${tableName}")`);
-    const columns = tableInfo.values.map((row) => row[1]);
-    if (!columns.includes("updated_at")) {
-      orderBy = "id";
-    }
-    const res = await db.query(`SELECT MAX(${orderBy}) AS last_update FROM "${tableName}"`);
-    return res.values.length > 0 ? res.values[0].last_update : null;
+    console.log(`✅ ${tableName} merged from all sources`);
   }
 }
 
@@ -197,23 +315,6 @@ export async function getTableData(tableName, limit = 100000) {
     return res.values;
   }
 }
-
-// --- دریافت آخرین تاریخ بروزرسانی ---
-// export async function getLastUpdate(tableName) {
-//   if (!db) throw new Error("❌ Database not loaded yet");
-
-//   if (Capacitor.getPlatform() === "web") {
-//     const res = db.exec(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
-//     return res.length > 0 ? res[0].values[0][0] : null;
-//   } else {
-//     const res = await db.query(`SELECT MAX(updated_at) AS last_update FROM "${tableName}"`);
-//     return res.values.length > 0 ? res.values[0].last_update : null;
-//   }
-// }
-
-// --- توابع عمومی برای تمام جدول‌ها ---
-
-// --- حذف رکوردها از هر جدول ---
 export async function deleteRecords(tableName, ids) {
   if (!ids || ids.length === 0) return;
   if (!db) throw new Error("❌ Database not loaded yet");
@@ -222,7 +323,7 @@ export async function deleteRecords(tableName, ids) {
   const query = `DELETE FROM "${tableName}" WHERE id IN (${placeholders})`;
 
   db.run(query, ids);
-  await saveToIndexedDB(db.export());
+  await saveToIndexedDB(NAME, KEY_NAME, db.export());
 
   console.log(`✅ Deleted ${ids.length} records from ${tableName}`);
 }
@@ -248,7 +349,7 @@ export async function upsertRecords(tableName, records) {
     );
   }
 
-  await saveToIndexedDB(db.export());
+  await saveToIndexedDB(NAME, KEY_NAME, db.export());
   console.log(`✅ Upserted ${records.length} records in ${tableName}`);
 }
 
@@ -359,4 +460,63 @@ export async function deletedData(tableName, ids) {
 
 export async function updateData(tableName, data) {
   return upsertRecords(tableName, data);
+}
+
+function manageIndexedDB(storeName, mode, callback) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE_NAME, 1);
+
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(storeName)) {
+        db.createObjectStore(storeName);
+      }
+    };
+
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(storeName)) {
+        console.error(`❌ ObjectStore "${storeName}" پیدا نشد`);
+        resolve(null);
+        return;
+      }
+      const tx = db.transaction(storeName, mode);
+      const store = tx.objectStore(storeName);
+      callback(store, resolve, reject);
+    };
+
+    request.onerror = reject;
+  });
+}
+
+async function saveToIndexedDB(name, key, data) {
+  return manageIndexedDB(name, "readwrite", (store, resolve, reject) => {
+    const req = store.put(data, key);
+    req.onsuccess = () => resolve(true);
+    req.onerror = reject;
+  });
+}
+
+async function loadFromIndexedDB(name, key) {
+  return manageIndexedDB(name, "readonly", (store, resolve, reject) => {
+    const req = store.get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = reject;
+  });
+}
+
+export async function getKeysInIndexedDB(name) {
+  return manageIndexedDB(name, "readonly", (store, resolve, reject) => {
+    const req = store.getAllKeys();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = reject;
+  });
+}
+
+async function deleteKeyFromIndexedDB(name, key) {
+  return manageIndexedDB(name, "readwrite", (store, resolve, reject) => {
+    const req = store.delete(key);
+    req.onsuccess = () => resolve(true);
+    req.onerror = reject;
+  });
 }
