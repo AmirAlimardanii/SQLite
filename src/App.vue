@@ -68,17 +68,21 @@
   </div>
 </template>
 <script setup>
+import { RECORDS } from "../pumps3_min.json";
+import { abbands } from "../ab_bands_min.json";
+import { Wells3 } from "../wells3_min.json";
+import { Pump3 } from "../CensusConst";
 import { ref, onMounted } from "vue";
 import {
   getTableData,
   manageIndexedDBFiles,
   importDatabaseFromFiles,
-  getKeysInIndexedDB,
+  // getKeysInIndexedDB,
 } from "@/services/dbService";
 
 const study = ref([]);
-const users = ref([]);
-const activeTab = ref("Wells3");
+// const users = ref([]);
+// const activeTab = ref("Wells3");
 
 const ddd = async () => {
   study.value = await getTableData("wells3");
@@ -103,7 +107,27 @@ onMounted(async () => {
     //     await upsertRecords("sources", allSourcesData);
     //   }
     // }
+    // if (sourcesSync.deletedData && sourcesSync.deletedData.length > 0) {
+    //   await deleteRecords("sources", sourcesSync.deletedData);
+    // }
 
+    // if (sourcesSync.updateData || sourcesSync.createData) {
+    //   const allSourcesData = [...(sourcesSync.updateData || []), ...(sourcesSync.createData || [])];
+    //   if (allSourcesData.length > 0) {
+    //     await upsertRecords("sources", allSourcesData);
+    //   }
+    // }
+
+    // if (usersSync.deletedData && usersSync.deletedData.length > 0) {
+    //   await deleteRecords("users", usersSync.deletedData);
+    // }
+
+    // if (usersSync.updateData || usersSync.createData) {
+    //   const allUsersData = [...(usersSync.updateData || []), ...(usersSync.createData || [])];
+    //   if (allUsersData.length > 0) {
+    //     await upsertRecords("users", allUsersData);
+    //   }
+    // }
     // if (usersSync.deletedData && usersSync.deletedData.length > 0) {
     //   await deleteRecords("users", usersSync.deletedData);
     // }
@@ -118,6 +142,8 @@ onMounted(async () => {
     // 5. بارگذاری داده‌ها برای نمایش
     // users.value = await getTableData("users");
 
+    // console.log("Sources loaded:", study.value.length);
+    // console.log("Users loaded:", users.value.length);
     // console.log("Sources loaded:", study.value.length);
     // console.log("Users loaded:", users.value.length);
 
@@ -185,3 +211,4 @@ tr:nth-child(even) {
   font-style: italic;
 }
 </style>
+
